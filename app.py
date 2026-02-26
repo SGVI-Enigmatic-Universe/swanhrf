@@ -12,6 +12,7 @@ import streamlit.components.v1 as components
 from streamlit_option_menu import option_menu
 import geopandas as gpd
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import time
 import io
 import os
@@ -20,7 +21,7 @@ import textwrap
 #python -m streamlit run app.py
 #py -3.11 -m pipreqs.pipreqs "S:/swan_survey"--force
 
-st.set_page_config(page_title="SWAN Status", page_icon="logo.png", layout="wide", initial_sidebar_state="collapsed", menu_items=None)
+st.set_page_config(page_title="SWAN Status", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded", menu_items=None)
 
 #st.markdown("<style>.block-container {max-width: 1400px; min-width: 1400px; margin-left: 80px;}</style>", unsafe_allow_html=True)
 st.markdown("<style>.block-container {max-width: 1150px; min-width: 1150px; margin: auto;}</style>", unsafe_allow_html=True)
@@ -1102,8 +1103,13 @@ if page == "Overview":
     html += '</tbody></table>'
     st.markdown(html, unsafe_allow_html=True)
     #st.markdown('<p style="color:#6a0dad; font-weight:bold;">Last updated: 09 Feb 2026</p>', unsafe_allow_html=True)
+    today_india = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%d %b %Y")
     st.markdown(
-        "<div style='text-align:left; margin-top:-20px; margin-bottom:0px;'><h2 style='font-size:15px; color:#6a0dad'>⇒ Last updated: 25 Feb 2026</h2></div>",
+        f"""
+        <div style='text-align:left; margin-top:-20px; margin-bottom:0px;'>
+            <h2 style='font-size:15px; color:#6a0dad'>⇒ Last updated: {today_india}</h2>
+        </div>
+        """,
         unsafe_allow_html=True
     )
 # =====================
@@ -2029,7 +2035,7 @@ elif page == "Dashboard":
                 )
                 @st.cache_data(show_spinner=False)
                 def load_geojson_local():
-                    with open("tn_districts.geojson", "r", encoding="utf-8") as f:
+                    with open("tn_districts_simplified.geojson", "r", encoding="utf-8") as f:
                         geojson = json.load(f)
                     for idx, feature in enumerate(geojson['features']):
                         feature['id'] = idx
@@ -3271,5 +3277,6 @@ elif page == "Entitlements":
         fig_docs.update_xaxes(
             tickfont=dict(color="black")
         )
+
 
         st.plotly_chart(fig_docs, use_container_width=True)
