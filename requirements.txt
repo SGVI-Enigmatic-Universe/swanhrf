@@ -1,0 +1,13 @@
+streamlit==1.53.1
+pandas>=1.4.0,<3
+numpy
+plotly
+bcrypt==4.1.0
+cffi>=1.15.1
+Requests
+openpyxl
+streamlit_option_menu
+geopandas
+
+
+
