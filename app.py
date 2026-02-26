@@ -1103,7 +1103,9 @@ if page == "Overview":
     html += '</tbody></table>'
     st.markdown(html, unsafe_allow_html=True)
     #st.markdown('<p style="color:#6a0dad; font-weight:bold;">Last updated: 09 Feb 2026</p>', unsafe_allow_html=True)
+    
     today_india = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%d %b %Y")
+
     st.markdown(
         f"""
         <div style='text-align:left; margin-top:-20px; margin-bottom:0px;'>
@@ -1112,6 +1114,7 @@ if page == "Overview":
         """,
         unsafe_allow_html=True
     )
+    
 # =====================
 # SUBMISSIONS PAGE
 # =====================
@@ -2930,6 +2933,7 @@ elif page == "User Activity":
 
     # st.write(df[df["Activity"] == "Evidence Upload"][["Event_DT"]].sort_values("Event_DT"))
 #------------------------------------------------------
+
 elif page == "Entitlements":
     st.markdown(
         "<div style='text-align:center; margin-top:-100px; '><h2 style='font-size:30px; color:#6a0dad'>Entitlements Status</h2></div>",
@@ -3115,8 +3119,30 @@ elif page == "Entitlements":
         #st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})  
     st.markdown("<div style='text-align:center; margin-top:-80px; margin-bottom:0px;'><h2 style='font-size:20px; color:#6a0dad'>Entitlements Summary</h2></div>", unsafe_allow_html=True)
     
-    filter_col1, filter_col2, filter_col3 = st.columns([0.6, 0.4, 0.7])
-    with filter_col2:
+    #filter_col1, filter_col2, filter_col3 = st.columns([1, 1.5, 0.4])
+    #with filter_col1:
+    col_a, col_b, col_c, col_d, col_e= st.columns([1,1,0.3,0.3,0.3])
+    with col_c:
+        st.write(" ")
+        st.write(" ")
+        applied_sel = st.checkbox("Applied", value=True)
+    with col_d:
+        st.write(" ")
+        st.write(" ")
+        received_sel = st.checkbox("Received", value=True)
+
+    # Build list of selected statuses
+    status_selected = []
+    if applied_sel:
+        status_selected.append("Applied")
+    if received_sel:
+        status_selected.append("Received")
+
+    # If none selected, show all (optional behavior)
+    if not status_selected:
+        status_selected = ["Applied", "Received"]
+
+    with col_a:
         applied_filter = st.selectbox(
             "Document Type",
             ["All"] + sorted(df["Applied for"].dropna().unique())
@@ -3126,25 +3152,20 @@ elif page == "Entitlements":
             categories = ["All"] + sorted(df["Category"].dropna().unique())
         else:
             categories = ["All"] + sorted(df[df["Applied for"] == applied_filter]["Category"].dropna().unique())
-
+    with col_b:
         category_filter = st.selectbox(
             "Subtype",
             categories
         )
-        
+    filter_col1, filter_col2 = st.columns([1,2])    
     filtered_df = df.copy()
-
+    filtered_df = filtered_df[filtered_df["Status"].isin(status_selected)]
     if applied_filter != "All":
         filtered_df = filtered_df[filtered_df["Applied for"] == applied_filter]
 
     if category_filter != "All":
         filtered_df = filtered_df[filtered_df["Category"] == category_filter]   
-    district_summary = (
-    filtered_df.groupby(["District", "Status"])
-    .size()
-    .unstack(fill_value=0)
-    .reset_index()
-    )
+    district_summary = (filtered_df.groupby(["District", "Status"]).size().unstack(fill_value=0).reset_index() )
 
     district_summary.columns.name = None
 
@@ -3169,7 +3190,16 @@ elif page == "Entitlements":
     ]
     with filter_col1:
         summary_html = district_summary.to_html(index=False, classes="entitlements-table")
+        # Number of rows in the table (including TOTAL)
+        row_count = len(district_summary)
 
+        # Approximate heights (px)
+        row_height = 50    # height per row (adjust if your CSS padding changes)
+        header_height = 40 # header row
+        max_height = 500   # maximum table height
+
+        # Compute table height
+        table_height = min(header_height + row_count * row_height, max_height)
         components.html(
             f"""
             <style>
@@ -3216,15 +3246,114 @@ elif page == "Entitlements":
 
             {summary_html}
             """,
-            height=400,
+            height=table_height,
             scrolling=True
         )
-    with filter_col3:
+        
+    
+    with filter_col2:
+    # --- Document-wise summary table ---
+    # Make sure 'Category' is truly blank, not NaN or None
+        filtered_df["Category"] = filtered_df["Category"].replace({None: "", "nan": ""}).fillna("")
+        doc_summary = (
+            filtered_df.groupby(["Applied for", "Category", "Status"])
+            .size()
+            .unstack(fill_value=0)
+            .reset_index()
+        )
+
+        doc_summary.columns.name = None
+
+        # Guarantee required columns
+        if "Applied" not in doc_summary.columns:
+            doc_summary["Applied"] = 0
+        if "Received" not in doc_summary.columns:
+            doc_summary["Received"] = 0
+
+        # Keep only required columns
+        doc_summary = doc_summary[["Applied for", "Category", "Applied", "Received"]]
+
+        # Add serial number
+        doc_summary = doc_summary.reset_index(drop=True)
+        doc_summary.insert(0, "#", range(1, len(doc_summary) + 1))
+
+        # Add totals row
+        total_applied = int(doc_summary["Applied"].sum())
+        total_received = int(doc_summary["Received"].sum())
+
+        #doc_summary.loc[len(doc_summary)] = ["", "TOTAL", total_applied, total_received]
+        doc_summary.loc[len(doc_summary)] = ["", "TOTAL", "", total_applied, total_received]
+        # Render as HTML table
+        doc_html = doc_summary.to_html(index=False, classes="entitlements-table")
+        row_count = len(doc_summary)
+
+        # Approximate heights (px)
+        row_height = 50    # height per row (adjust if your CSS padding changes)
+        header_height = 40 # header row
+        max_height = 500   # maximum table height
+
+        # Compute table height
+        table_height = min(header_height + row_count * row_height, max_height)
+        components.html(
+            f"""
+            <style>
+            @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;500;600&display=swap');
+
+            .entitlements-table {{
+                width: auto;
+                display: inline-table;
+                border-collapse: collapse;
+                font-family: 'Roboto Condensed', sans-serif;
+                font-size: 14px;
+                color: #222;
+            }}
+
+            .entitlements-table th {{
+                background-color: rgba(106,13,173,0.1);
+                font-weight: 600;
+                padding: 10px 12px;
+                border: 1px solid #e0e0e0;
+                text-align: left;
+            }}
+
+            .entitlements-table td {{
+                padding: 10px 12px;
+                border: 1px solid #e0e0e0;
+                font-weight: 400;
+            }}
+
+            /* Center serial + numeric columns */
+            .entitlements-table th:nth-child(1),
+            .entitlements-table th:nth-child(3),
+            .entitlements-table th:nth-child(4),
+            .entitlements-table td:nth-child(1),
+            .entitlements-table td:nth-child(3),
+            .entitlements-table td:nth-child(4) {{
+                text-align: center;
+            }}
+
+            .entitlements-table tr:last-child {{
+                font-weight: 600;
+                background-color: rgba(106,13,173,0.05);
+            }}
+            </style>
+
+            {doc_html}
+            """,
+            height=table_height,
+            scrolling=True
+        )
+    st.markdown("<div style='text-align:center; margin-top:-50px; margin-bottom:20px;'><h2 style='font-size:20px; color:#6a0dad'>Entitlements Overall Glance</h2></div>", unsafe_allow_html=True)
+    chart_col1, chart_col2= st.columns([1.5,1])
+    with chart_col1:
+        #filtered_df["Category"] = filtered_df["Category"].fillna("Unknown")
+        filtered_df["Category"] = filtered_df["Category"].replace({None: "", "nan": ""}).fillna("")
         chart_df = (
             filtered_df.groupby(["Applied for", "Category"])
             .size()
             .reset_index(name="Count")
         )
+        
         fig_docs = px.bar(
             chart_df,
             y="Applied for",
@@ -3241,11 +3370,11 @@ elif page == "Entitlements":
                 "#6a0dad"   # darkest
             ],
 
-            labels={
-                "Applied for": "Document Type",
-                "Count": "Applications",
-                "Category": "Subtype"
-            }
+            # labels={
+            #     "Applied for": "Document Type",
+            #     "Count": "Applications",
+            #     "Category": "Subtype"
+            # }, hover_data={"Category": False}
         )
         doc_count = chart_df["Applied for"].nunique()
         fig_height = max(180, doc_count * 30)  
@@ -3263,11 +3392,11 @@ elif page == "Entitlements":
             # ✅ Prevent huge vertical spacing
             #height=max(320, len(chart_df["Applied for"].unique()) * 28),
             height=fig_height,
-            margin=dict(l=10, r=10, t=30, b=10)
+            margin=dict(l=0, r=0, t=0, b=0)
         )
         # ✅ Make bars medium-thin
         fig_docs.update_traces(
-            marker_line_width=0,
+            hovertemplate="%{x}", marker_line_width=0,
         )
 
         fig_docs.update_yaxes(
@@ -3277,6 +3406,59 @@ elif page == "Entitlements":
         fig_docs.update_xaxes(
             tickfont=dict(color="black")
         )
-
-
+        
         st.plotly_chart(fig_docs, use_container_width=True)
+    with chart_col2:
+    # Aggregate counts for Applied and Received based on filtered_df
+        status_counts = (
+            filtered_df["Status"]
+            .value_counts()
+            .reindex(["Applied", "Received"], fill_value=0)
+            .reset_index()
+        )
+        status_counts.columns = ["Status", "Count"]
+
+        # Define colors
+        colors = ["#d6bdf0", "#6a0dad"]  # Applied = light purple, Received = dark purple
+
+        # Donut chart
+        fig_donut = px.pie(
+            status_counts,
+            names="Status",
+            values="Count",
+            hole=0.6,  # makes it donut
+            color="Status",
+            color_discrete_map={"Applied": colors[0], "Received": colors[1]},
+        )
+        counts = status_counts.set_index("Status")["Count"]
+        nonzero_counts = counts[counts > 0]
+        if len(nonzero_counts) <= 1:
+            rotation_angle = 0
+        else:
+            # smaller slice
+            smaller = nonzero_counts.min()
+            total = nonzero_counts.sum()
+            # rotation to visually center smaller slice
+            rotation_angle = (360 * smaller / total) / 2
+            # optional: cap at 25 deg max for very small slices
+            rotation_angle = min(rotation_angle, 25)
+    
+        # Show counts inside slices, hide hover
+        fig_donut.update_traces(
+            text=status_counts.apply(lambda row: f"{row['Status']}: {row['Count']}", axis=1),
+            textinfo="text",
+            textposition="inside",  # inside by default
+            insidetextorientation="auto",
+            hoverinfo="skip", 
+            hovertemplate=None,
+            textfont_size=12, rotation=rotation_angle
+        )
+
+        # Layout adjustments
+        fig_donut.update_layout(
+            showlegend=False, height=fig_height,
+            margin=dict(l=10, r=0, t=0, b=0),
+            paper_bgcolor="rgba(0,0,0,0)",
+        )
+
+        st.plotly_chart(fig_donut, use_container_width=True)
