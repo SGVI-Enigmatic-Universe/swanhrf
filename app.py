@@ -949,7 +949,7 @@ if page == "Overview":
     geojson_data, map_df_full = load_map_assets(df)
     
     @st.cache_data(show_spinner=False, persist="disk")
-    def prepare_map_df(map_df_full, geojson_file="geojson_data"):
+    def prepare_map_df(map_df_full, geojson_data):
     # --- Choropleth 
         custom_scale = [
             [0, "#ffffff"], # start from white
@@ -985,27 +985,14 @@ if page == "Overview":
                 title=dict(text="Submissions", font=dict(color="black")),          # ⭐ title
                 outlinecolor="black", outlinewidth=0.7
             ))
-        # fig.add_annotation(
-        #     text="  Tamil Nadu - District-wise Submissions  ",
-        #     x=0.0,
-        #     y=0.85,
-        #     xref="paper",
-        #     yref="paper",
-        #     showarrow=False,
-        #     font=dict(size=18, color="black"),
-        #     bgcolor="rgba(200, 170, 230, 0.4)",  # light purple, semi-transparent
-        #     bordercolor="light grey",
-        #     borderwidth=1,
-        #     align="left",
-        #     opacity=1
-        # )
         return fig
     fig = prepare_map_df(map_df_full,geojson_data)
+    #st.session_state.map_render_id = st.session_state.get("map_render_id", 0) + 1
     # with col2:
     # col1,col2,col3 = st.columns([0.3, 2, 0.5])
     with col3:
-        st.plotly_chart(fig, use_container_width=True, config={"responsive": True})
-    
+        #st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False}, key=f"district_map_{st.session_state.map_render_id}")
+        components.html(fig.to_html(include_plotlyjs="cdn",full_html=False,config={"displayModeBar": False}),height=550)
     # --- Group by district and NGO
     @st.cache_data(show_spinner=False)
     def get_grouped_ngo(df, DISTRICT_COL, NGO_COL):
@@ -1120,6 +1107,12 @@ if page == "Overview":
 # =====================
 elif page == "Submissions":
     # Require login first
+    if "login_ready" not in st.session_state:
+        st.session_state.login_ready = False
+        with st.spinner("Loading secure login..."):
+            time.sleep(0.8)
+        st.session_state.login_ready = True
+        st.rerun()
     if not st.session_state.authenticated:
         login()
         st.stop()
@@ -2939,6 +2932,41 @@ elif page == "Entitlements":
         "<div style='text-align:center; margin-top:-100px; '><h2 style='font-size:30px; color:#6a0dad'>Entitlements Status</h2></div>",
         unsafe_allow_html=True
     )
+    st.markdown("""
+    <style>
+    .ticker-wrapper {
+        width: 100%;
+        overflow: hidden;
+        background: rgba(106, 13, 173, 0.1);
+        border-radius: 8px;
+        padding: 8px 0;
+    }
+
+    .ticker-text {
+        display: inline-block;
+        white-space: nowrap;
+        padding-left: 100%;
+        animation: ticker 30s linear infinite;
+        font-weight: 600;
+        color: #6a0dad;
+        font-size: 16px;
+    }
+    .ticker-text:hover {
+        animation-play-state: paused;
+    }
+    @keyframes ticker {
+        0%   { transform: translateX(0%); }
+        100% { transform: translateX(-100%); }
+    }
+    </style>
+
+    <div class="ticker-wrapper">
+        <div class="ticker-text">
+            📢 Welcome to SWAN Status Portal — We are currently conducting SWAN (Social & Community Level Impact) Survey across various districts of Tamil Nadu — 🚀 Application Tracking is NOT yet officially launched — ⚠️ Data currently displayed here is temporary test data used for system validation and performance testing — 📊 Official tracking announcement will be made soon — Thank you for your cooperation and continued support!
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    #st.write("Currently Test Data Processed, wait until official tracking announcement")
     sheet_link = "https://docs.google.com/spreadsheets/d/1dlxiNuYJlaBv5BSpeBzZmuPDgcMUNsSBSB8DrKkNNp8/edit?usp=sharing"
     sheet_id = "1dlxiNuYJlaBv5BSpeBzZmuPDgcMUNsSBSB8DrKkNNp8"
     sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
@@ -3121,6 +3149,16 @@ elif page == "Entitlements":
     
     #filter_col1, filter_col2, filter_col3 = st.columns([1, 1.5, 0.4])
     #with filter_col1:
+    st.markdown("""
+    <style>
+    /* Target checkbox label text */
+    div[data-testid="stCheckbox"] label p {
+        font-size: 15px !important;   /* h2 size */
+        font-weight: 600 !important;
+        color: #6a0dad !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     col_a, col_b, col_c, col_d, col_e= st.columns([1,1,0.3,0.3,0.3])
     with col_c:
         st.write(" ")
@@ -3326,9 +3364,11 @@ elif page == "Entitlements":
             .entitlements-table th:nth-child(1),
             .entitlements-table th:nth-child(3),
             .entitlements-table th:nth-child(4),
+            .entitlements-table th:nth-child(5),
             .entitlements-table td:nth-child(1),
             .entitlements-table td:nth-child(3),
-            .entitlements-table td:nth-child(4) {{
+            .entitlements-table td:nth-child(4),
+            .entitlements-table td:nth-child(5) {{
                 text-align: center;
             }}
 
