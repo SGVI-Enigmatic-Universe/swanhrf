@@ -24,7 +24,7 @@ import textwrap
 st.set_page_config(page_title="SWAN Status", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded", menu_items=None)
 
 #st.markdown("<style>.block-container {max-width: 1400px; min-width: 1400px; margin-left: 80px;}</style>", unsafe_allow_html=True)
-st.markdown("<style>.block-container {max-width: 1150px; width: 95%; margin: auto;}</style>", unsafe_allow_html=True)
+st.markdown("<style>.block-container {max-width: 1150px; min-width: 1150; margin: auto;}</style>", unsafe_allow_html=True)
 st.markdown("<style>section[data-testid='stMain'] {padding-top: 0rem !important;}</style>", unsafe_allow_html=True)
 st.markdown("<style>section[data-testid='stMain'] > div {padding-top: 0rem !important;}</style>", unsafe_allow_html=True)
 #st.markdown("<h1 style='margin-top:0rem;'>Tamil Nadu (District-wise) SWAN Survey Summary</h1>", unsafe_allow_html=True)
