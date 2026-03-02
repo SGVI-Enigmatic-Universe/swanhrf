@@ -750,6 +750,7 @@ def load_data():
     sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
     #start = time.time()
     df = pd.read_csv(sheet_url)
+	df = df.dropna(how='all')
     #st.write("Sheet loaded in", time.time() - start, "seconds")
     #st.dataframe(df, use_container_width=True, hide_index=True)
     # Clean column names (VERY IMPORTANT for Google Sheets)
@@ -3730,4 +3731,5 @@ elif selected == "Manage Users" and st.session_state.get("role") == "admin":
 
     if st.button("Save Changes"):
         edited_df.to_excel(USER_FILE, index=False)
+
         st.success("Changes saved successfully!")
