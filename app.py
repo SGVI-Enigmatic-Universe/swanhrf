@@ -41,7 +41,7 @@ st.markdown("""
 @media (max-width: 1150px) {
     .block-container {
         width: 1150px;  /* keep original width */
-        transform: scale(calc(100vw / 1150));  /* scale to fit screen */
+        transform: scale(max(0.5,calc(100vw / 1150)));  /* scale to fit screen */
     }
 }
 </style>
