@@ -27,7 +27,25 @@ import threading
 st.set_page_config(page_title="SWAN Status", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded", menu_items=None)
 
 #st.markdown("<style>.block-container {max-width: 1400px; min-width: 1400px; margin-left: 80px;}</style>", unsafe_allow_html=True)
-st.markdown("<style>.block-container {max-width: 1150px; min-width: 1150px; margin: auto;}</style>", unsafe_allow_html=True)
+#st.markdown("<style>.block-container {max-width: 1150px; min-width: 1150px; margin: auto;} </style>", unsafe_allow_html=True)
+st.markdown("""
+<style>
+.block-container {
+    max-width: 1150px;
+    min-width: 1150px;
+    margin: auto;
+    transform-origin: top center;
+}
+
+/* For screens smaller than 1150px */
+@media (max-width: 1150px) {
+    .block-container {
+        width: 1150px;  /* keep original width */
+        transform: scale(calc(100vw / 1150));  /* scale to fit screen */
+    }
+}
+</style>
+""", unsafe_allow_html=True)
 st.markdown("<style>section[data-testid='stMain'] {padding-top: 0rem !important;}</style>", unsafe_allow_html=True)
 st.markdown("<style>section[data-testid='stMain'] > div {padding-top: 0rem !important;}</style>", unsafe_allow_html=True)
 #st.markdown("<h1 style='margin-top:0rem;'>Tamil Nadu (District-wise) SWAN Survey Summary</h1>", unsafe_allow_html=True)
