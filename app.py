@@ -622,7 +622,9 @@ def login():
                     """,
                     unsafe_allow_html=True
                 )
-
+            # ✅ Before your login form
+            loading_placeholder = st.empty()
+            loading_placeholder.info("⏳ Loading authentication...")
             with st.form("login_form"):
                 username = st.text_input("User ID")
                 password = st.text_input("Password", type="password")
@@ -632,7 +634,7 @@ def login():
                     submitted = st.form_submit_button("Login")
 
             st.markdown('</div>', unsafe_allow_html=True)
-
+            loading_placeholder.empty()
     if not submitted:
         st.stop()
         #return    
@@ -750,7 +752,7 @@ def load_data():
     sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
     #start = time.time()
     df = pd.read_csv(sheet_url)
-	df = df.dropna(how='all')
+    df = df.dropna(how='all')
     #st.write("Sheet loaded in", time.time() - start, "seconds")
     #st.dataframe(df, use_container_width=True, hide_index=True)
     # Clean column names (VERY IMPORTANT for Google Sheets)
@@ -1135,17 +1137,17 @@ if page == "Overview":
 # =====================
 elif page == "Submissions":
     # ✅ Before your login form
-    loading_placeholder = st.empty()
-    loading_placeholder.info("⏳ Loading authentication...")
+    #loading_placeholder = st.empty()
+    #loading_placeholder.info("⏳ Loading authentication...")
 
     # Your existing login form code here
-    with st.form("login_form"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Login")
+    # with st.form("login_form"):
+    #     username = st.text_input("Username")
+    #     password = st.text_input("Password", type="password")
+    #     submitted = st.form_submit_button("Login")
 
     # ✅ Once form is rendered, remove placeholder
-    loading_placeholder.empty()
+    #loading_placeholder.empty()
     if "login_ready" not in st.session_state:
         placeholder = st.empty()
         with placeholder.container():
@@ -3559,16 +3561,11 @@ elif page == "Entitlements":
             margin=dict(l=10, r=0, t=0, b=0),
             paper_bgcolor="rgba(0,0,0,0)",
         )
-
         st.plotly_chart(fig_donut, use_container_width=True)
 #---- Add New Users Page   
 elif selected == "Add New Users" and st.session_state.get("role") == "admin":
     st.markdown("<div style='text-align:center; margin-top:-100px; margin-bottom:0px;'><h2 style='font-size:30px; color:#6a0dad'>➕ Add New NGO User</h2></div>", unsafe_allow_html=True)
-
     USER_FILE = "user.xlsx"
-    # sheet_id = "1Iucp8OfNXgbSbHoqKV7m2iDN40FnkVU3JV--mmpEc8g"
-    # USER_FILE = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
-
     district_codes = {
         "Ariyalur": "alu",
         "Chengalpet": "cgl",
@@ -3683,54 +3680,28 @@ elif selected == "Add New Users" and st.session_state.get("role") == "admin":
                 df.to_excel(USER_FILE, index=False)
                 fix_unhashed_passwords(USER_FILE)
                 df_new = pd.read_excel(USER_FILE)
-                # 3️⃣ Save to Excel safely
-                # with pd.ExcelWriter(USER_FILE, engine='openpyxl') as writer:
-                #     df.to_excel(writer, index=False, sheet_name='Sheet1')
-                #     worksheet = writer.sheets['Sheet1']
-                #     for row in range(2, len(df)+2):  # Excel rows start at 1, header = 1
-                #         worksheet.cell(row=row, column=6).number_format = '@'
-                #         # Extra safety: force single line string
-                #         #cell.value = str(cell.value).strip()
-
-                #df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-                #df.to_excel(USER_FILE, index=False)
-
                 st.success(f"User {userid} created successfully with serial {next_serial}!")
                 
         if st.button("💥Refresh app and user data!"):
         # Clear all session state keys
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
-
             # Clear Streamlit caches
             st.cache_data.clear()
             st.cache_resource.clear()
-
             # Clear users_df if stored in session
             if "users_df" in st.session_state:
                 del st.session_state["users_df"]
-
             # Set a flag to indicate full reset
             st.session_state.reset_done = True
-
             # Rerun the app
             st.rerun()
-                    
-                # # 🔹 Debug display (optional)
-                # st.write("Saved hash (one line):", df_new.tail(1)["Password"].values[0])
-                # st.write("Serial #: ", df_new.tail(1)["#"].values[0])
-                # st.write("Length:", len(str(df_new.tail(1)["Password"].values[0])))
-                # st.write("Starts with:", str(df_new.tail(1)["Password"].values[0])[:4])
                         
 elif selected == "Manage Users" and st.session_state.get("role") == "admin":
     st.markdown("<div style='text-align:center; margin-top:-100px; margin-bottom:0px;'><h2 style='font-size:30px; color:#6a0dad'>👥 Manage Users</h2></div>", unsafe_allow_html=True)
-    
     df = pd.read_excel(USER_FILE)
-
     edited_df = st.data_editor(df, num_rows="dynamic")
-
     if st.button("Save Changes"):
         edited_df.to_excel(USER_FILE, index=False)
-
         st.success("Changes saved successfully!")
-
+        
