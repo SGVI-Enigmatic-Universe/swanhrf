@@ -17,6 +17,9 @@ import time
 import io
 import os
 import textwrap
+from flask import Flask, render_template
+import subprocess
+import threading
 
 #python -m streamlit run app.py
 #py -3.11 -m pipreqs.pipreqs "S:/swan_survey"--force
@@ -589,7 +592,7 @@ def login():
                     /* Force all Streamlit input boxes (text and password) to have white background and black text */
                     div.stTextInput>div>div>input {
                         background-color: white !important;
-                        color: white !important;
+                        color: black !important;
                     }
                     </style>
                     """,
@@ -618,8 +621,9 @@ def login():
     if not bool(user["Active"]):
         st.error("User is inactive. Contact administrator.")
         return
-
-    if bcrypt.checkpw(password.encode(), user["Password"] .encode()):
+    stored_hash = str(user["Password"]).strip()
+    if bcrypt.checkpw(password.encode(), stored_hash.encode()):
+    #if bcrypt.checkpw(password.encode(), user["Password"] .encode()):
         st.session_state.authenticated = True
         st.session_state.user = username
         st.session_state.role = str(user["Role"]).lower()
@@ -807,6 +811,10 @@ icons = ["file-earmark-text", "stack-overflow", "bar-chart-line", "file-person"]
 if st.session_state.get("role") == "admin":
     options.append("User Activity")
     icons.append("file-earmark-lock2")  # icon for user activity
+    options.append("Add New Users")
+    icons.append("person-plus")
+    options.append("Manage Users")
+    icons.append("people")
 with st.sidebar:
     selected = option_menu(
         menu_title="Menu 🔎",
@@ -1101,16 +1109,31 @@ if page == "Overview":
 # SUBMISSIONS PAGE
 # =====================
 elif page == "Submissions":
-    # Require login first
+
     if "login_ready" not in st.session_state:
-        st.session_state.login_ready = False
-        with st.spinner("Loading secure login..."):
-            time.sleep(0.8)
+        placeholder = st.empty()
+        with placeholder.container():
+            with st.spinner("Loading secure login..."):
+                time.sleep(0.8)
         st.session_state.login_ready = True
         st.rerun()
+
     if not st.session_state.authenticated:
-        login()
+        placeholder = st.empty()
+        with placeholder.container():
+            login()
         st.stop()
+        
+    # Require login first
+    # if "login_ready" not in st.session_state:
+    #     st.session_state.login_ready = False
+    #     with st.spinner("Loading secure login..."):
+    #         time.sleep(0.8)
+    #     st.session_state.login_ready = True
+    #     st.rerun()
+    # if not st.session_state.authenticated:
+    #     login()
+    #     st.stop()
   
     #ngo_name = st.session_state.get("ngo_name", "")
     #st.title(f"Greetings! {ngo_name}")
@@ -2718,6 +2741,8 @@ elif page == "Dashboard":
 # USER ACTIVITY PAGE (Admin Only)
 # =====================
 elif page == "User Activity": 
+    # sheet_idul = "1y-m_sSp9Oi8w93YLit9QKamzCel0mYy5JSxV63-i_F0"
+    # USER_LOGS_FILE = f"https://docs.google.com/spreadsheets/d/{sheet_idul}/export?format=csv"
     USER_LOGS_FILE = "userlogs.csv"
     if not st.session_state.get("authenticated", False):
         login()
@@ -2921,7 +2946,7 @@ elif page == "User Activity":
 
     # st.write(df[df["Activity"] == "Evidence Upload"][["Event_DT"]].sort_values("Event_DT"))
 #------------------------------------------------------
-
+#Entitlements page
 elif page == "Entitlements":
     st.markdown(
         "<div style='text-align:center; margin-top:-100px; '><h2 style='font-size:30px; color:#6a0dad'>Entitlements Status</h2></div>",
@@ -3033,7 +3058,7 @@ elif page == "Entitlements":
                 font-weight: 600;
                 padding: 10px 12px;
                 border: 1px solid #e0e0e0;
-                text-align: left;
+                text-align: left; vertical-align: top;
             }}
 
             /* Body cells */
@@ -3050,9 +3075,12 @@ elif page == "Entitlements":
             .entitlements-table td:nth-child(1),
             .entitlements-table td:nth-child(4),
             .entitlements-table td:nth-child(5) {{
-                text-align: center;
+                text-align: center; vertical-align: top;
             }}
-
+            /* Center 2nd columns */
+            .entitlements-table td:nth-child(2) {{
+                text-align: left; vertical-align: top;
+            }}
             /* Total row */
             .entitlements-table tr:last-child {{
                 font-weight: 600;
@@ -3496,5 +3524,175 @@ elif page == "Entitlements":
             paper_bgcolor="rgba(0,0,0,0)",
         )
 
-
         st.plotly_chart(fig_donut, use_container_width=True)
+#---- Add New Users Page   
+elif selected == "Add New Users" and st.session_state.get("role") == "admin":
+    st.markdown("<div style='text-align:center; margin-top:-100px; margin-bottom:0px;'><h2 style='font-size:30px; color:#6a0dad'>➕ Add New NGO User</h2></div>", unsafe_allow_html=True)
+
+    USER_FILE = "user.xlsx"
+    # sheet_id = "1Iucp8OfNXgbSbHoqKV7m2iDN40FnkVU3JV--mmpEc8g"
+    # USER_FILE = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+
+    district_codes = {
+        "Ariyalur": "alu",
+        "Chengalpet": "cgl",
+        "Chennai": "mas",
+        "Coimbatore": "cbe",
+        "Cuddalore": "cdl",
+        "Dharmapuri": "dpj",
+        "Dindigul": "ddg",
+        "Erode": "erd",
+        "Kallakurichi": "kkr",
+        "Kanchipuram": "kcp",
+        "Kanyakumari": "knk",
+        "Karur": "krr",
+        "Krishnagiri": "knj",
+        "Madurai": "mdu",
+        "Mayiladuthurai": "mld",
+        "Nagapattinam": "ngt",
+        "Namakkal": "nmk",
+        "Nilgiris": "uam",
+        "Perambalur": "prb",
+        "Pudukkottai": "pdk",
+        "Ramanathapuram": "rmd",
+        "Ranipet": "rpt",
+        "Salem": "sal",
+        "Sivagangai": "svg",
+        "Tenkasi": "tsi",
+        "Thanjavur": "tjv",
+        "Theni": "tni",
+        "Thoothukudi": "tut",
+        "Tirunelveli": "ten",
+        "Tirupathur": "tpt",
+        "Tiruppur": "tup",
+        "Tiruvallur": "trl",
+        "Tiruvannamalai": "tnm",
+        "Tiruvarur": "tvr",
+        "Tiruchirappalli": "tpj",
+        "Vellore": "vlr",
+        "Villupuram": "vlm",
+        "Virudhunagar": "vpt",
+        "Puducherry": "pdy",
+        "Karaikkal": "kik"
+    }
+
+    def hash_password(password):
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+    def get_next_userid(district, dcode):
+        df = pd.read_excel(USER_FILE)
+
+        district_users = df[df["District"] == district]
+
+        if district_users.empty:
+            return f"{dcode}001"
+
+        existing_ids = district_users["UserID"].str.replace(dcode, "", regex=False)
+        max_num = existing_ids.astype(int).max()
+        return f"{dcode}{max_num + 1:03}"
+
+    def fix_unhashed_passwords(file_path):
+        df = pd.read_excel(file_path)
+        updated = False
+        for i, row in df.iterrows():
+            pw = str(row['Password']).strip()
+            if not pw.startswith("$2b$"):  # not hashed yet
+                df.at[i, 'Password'] = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+                updated = True
+        if updated:
+            df.to_excel(file_path, index=False)
+            print("✅ Unhashed passwords fixed")
+
+
+    district = st.selectbox("Select District", list(district_codes.keys()))
+    ngo_name = st.text_input("NGO Name")
+
+    if district:
+        dcode = district_codes[district]
+        auto_userid = get_next_userid(district, dcode)
+        auto_password = f"{auto_userid.capitalize()}@swan"
+        
+        st.markdown("<div style='text-align:center; margin-top:0px; margin-bottom:0px;'><h2 style='font-size:20px; color:#6a0dad'>🔹Suggestion (Editable)</h2></div>", unsafe_allow_html=True)
+        
+        userid = st.text_input("UserID", value=auto_userid)
+        password = st.text_input("Password", value=auto_password)
+        active = st.selectbox("Active Status", [1, 0])
+
+        if st.button("Create User"):
+
+            df = pd.read_excel(USER_FILE)
+
+            if userid in df["UserID"].values:
+                st.error("UserID already exists!")
+            else:
+                #hashed_pw = hash_password(password)
+                #hashed_pw = str(hashed_pw).replace("\n", "").replace("\r", "").strip()
+                # --- Auto serial number ---
+                serials = pd.to_numeric(df["#"], errors="coerce").fillna(0)
+                next_serial = int(serials.max()) + 1 if not serials.empty else 1
+                
+                new_row = {
+                    "#": next_serial,
+                    "Role": "user",
+                    "District": district,
+                    "NGO": ngo_name,
+                    "UserID": userid,
+                    "Password": password,
+                    "Active": active
+                }
+                
+                df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+                columns_in_order = ["#", "Role", "District", "NGO", "UserID", "Password", "Active"]
+                df = df[columns_in_order]
+                df.to_excel(USER_FILE, index=False)
+                fix_unhashed_passwords(USER_FILE)
+                df_new = pd.read_excel(USER_FILE)
+                # 3️⃣ Save to Excel safely
+                # with pd.ExcelWriter(USER_FILE, engine='openpyxl') as writer:
+                #     df.to_excel(writer, index=False, sheet_name='Sheet1')
+                #     worksheet = writer.sheets['Sheet1']
+                #     for row in range(2, len(df)+2):  # Excel rows start at 1, header = 1
+                #         worksheet.cell(row=row, column=6).number_format = '@'
+                #         # Extra safety: force single line string
+                #         #cell.value = str(cell.value).strip()
+
+                #df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+                #df.to_excel(USER_FILE, index=False)
+
+                st.success(f"User {userid} created successfully with serial {next_serial}!")
+                
+        if st.button("💥Refresh app and user data!"):
+        # Clear all session state keys
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+
+            # Clear Streamlit caches
+            st.cache_data.clear()
+            st.cache_resource.clear()
+
+            # Clear users_df if stored in session
+            if "users_df" in st.session_state:
+                del st.session_state["users_df"]
+
+            # Set a flag to indicate full reset
+            st.session_state.reset_done = True
+
+            # Rerun the app
+            st.rerun()
+                    
+                # # 🔹 Debug display (optional)
+                # st.write("Saved hash (one line):", df_new.tail(1)["Password"].values[0])
+                # st.write("Serial #: ", df_new.tail(1)["#"].values[0])
+                # st.write("Length:", len(str(df_new.tail(1)["Password"].values[0])))
+                # st.write("Starts with:", str(df_new.tail(1)["Password"].values[0])[:4])
+                        
+elif selected == "Manage Users" and st.session_state.get("role") == "admin":
+    st.markdown("<div style='text-align:center; margin-top:-100px; margin-bottom:0px;'><h2 style='font-size:30px; color:#6a0dad'>👥 Manage Users</h2></div>", unsafe_allow_html=True)
+    
+    df = pd.read_excel(USER_FILE)
+
+    edited_df = st.data_editor(df, num_rows="dynamic")
+
+    if st.button("Save Changes"):
+        edited_df.to_excel(USER_FILE, index=False)
+        st.success("Changes saved successfully!")
