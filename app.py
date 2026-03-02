@@ -31,6 +31,14 @@ st.markdown("<style>.block-container {max-width: 1150px; min-width: 1150px; marg
 st.markdown("<style>section[data-testid='stMain'] {padding-top: 0rem !important;}</style>", unsafe_allow_html=True)
 st.markdown("<style>section[data-testid='stMain'] > div {padding-top: 0rem !important;}</style>", unsafe_allow_html=True)
 #st.markdown("<h1 style='margin-top:0rem;'>Tamil Nadu (District-wise) SWAN Survey Summary</h1>", unsafe_allow_html=True)
+components.html("""
+<script type="text/javascript">
+    const metaOgTitle = document.createElement('meta');
+    metaOgTitle.setAttribute('property', 'og:title');
+    metaOgTitle.content = "SWAN";
+    document.head.appendChild(metaOgTitle);
+</script>
+""", height=0)
 st.markdown("""
         <meta property="og:title" content="SWAN">
         <meta property="og:description" content="District-level survey insights for Tamil Nadu">
@@ -143,6 +151,22 @@ input[type="radio"]:checked + div {
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown(
+    """
+    <style>
+    /* Fix sidebar width */
+    .css-1d391kg {  /* class controlling sidebar width */
+        min-width: 250px !important;
+        max-width: 250px !important;
+    }
+    /* Optional: hide the drag handle */
+    .css-1o3x0b7 { 
+        display: none !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 st.markdown(
     """
     <style>
@@ -691,7 +715,7 @@ def logout_user(username):
 if st.session_state.authenticated and st.session_state.get("selected_page") is None:
     st.session_state.selected_page = "Submissions"
 if st.session_state.get("authenticated"):
-    # if st.sidebar.button("🚪 Logout", key="global_logout"):
+    # if st.sidebar.button("🚪Logout", key="global_logout"):
     #     logout_user(st.session_state.user)
     #     #st.session_state.clear()
     #     for k in ["authenticated", "user", "role", "ngo", "district", "ngo_name", "selected_page", "login_logged"]:
@@ -699,7 +723,7 @@ if st.session_state.get("authenticated"):
     #     st.rerun()
     col1, col2 = st.sidebar.columns([1,1.5])  # Adjust width ratio as needed
     with col1:
-        if st.button("🚪 Logout", key="global_logout"):
+        if st.button("🚪Logout", key="global_logout"):
             logout_user(st.session_state.user)
             for k in ["authenticated", "user", "role", "ngo", "district", "ngo_name", "selected_page", "login_logged"]:
                 st.session_state.pop(k, None)
@@ -1109,7 +1133,18 @@ if page == "Overview":
 # SUBMISSIONS PAGE
 # =====================
 elif page == "Submissions":
+    # ✅ Before your login form
+    loading_placeholder = st.empty()
+    loading_placeholder.info("⏳ Loading authentication...")
 
+    # Your existing login form code here
+    with st.form("login_form"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Login")
+
+    # ✅ Once form is rendered, remove placeholder
+    loading_placeholder.empty()
     if "login_ready" not in st.session_state:
         placeholder = st.empty()
         with placeholder.container():
