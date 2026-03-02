@@ -30,6 +30,10 @@ st.set_page_config(page_title="SWAN Status", page_icon="logo.png", layout="wide"
 #st.markdown("<style>.block-container {max-width: 1150px; min-width: 1150px; margin: auto;} </style>", unsafe_allow_html=True)
 st.markdown("""
 <style>
+.app-view-container {
+    width: 100% !important;
+    max-width: 1150px !important; /* Adjust as needed */
+        }
 .main-wrapper {
     overflow-x: auto;
 }
