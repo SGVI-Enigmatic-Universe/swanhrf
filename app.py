@@ -28,6 +28,14 @@ st.markdown("<style>.block-container {max-width: 1150px; min-width: 1150px; marg
 st.markdown("<style>section[data-testid='stMain'] {padding-top: 0rem !important;}</style>", unsafe_allow_html=True)
 st.markdown("<style>section[data-testid='stMain'] > div {padding-top: 0rem !important;}</style>", unsafe_allow_html=True)
 #st.markdown("<h1 style='margin-top:0rem;'>Tamil Nadu (District-wise) SWAN Survey Summary</h1>", unsafe_allow_html=True)
+st.markdown("""
+        <meta property="og:title" content="SWAN">
+        <meta property="og:description" content="District-level survey insights for Tamil Nadu">
+        <meta property="og:image" content="https://swan.tn1st.in/logo.png">
+        <meta property="og:url" content="https://swan.tn1st.in">
+    """,
+    unsafe_allow_html=True
+)
 st.markdown(
     """
     <style>
@@ -132,19 +140,6 @@ input[type="radio"]:checked + div {
 </style>
 """, unsafe_allow_html=True)
 
-
-st.markdown(
-    """
-    <head>
-        <meta property="og:title" content="SWAN" />
-        <meta property="og:description" content="District-level survey insights for Tamil Nadu" />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://swan.tn1st.in" />
-        <meta property="og:image" content="https://swan.tn1st.in/logo.png" />
-    </head>
-    """,
-    unsafe_allow_html=True
-)
 st.markdown(
     """
     <style>
@@ -3500,5 +3495,6 @@ elif page == "Entitlements":
             margin=dict(l=10, r=0, t=0, b=0),
             paper_bgcolor="rgba(0,0,0,0)",
         )
+
 
         st.plotly_chart(fig_donut, use_container_width=True)
