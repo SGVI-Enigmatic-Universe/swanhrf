@@ -623,8 +623,8 @@ def login():
                     unsafe_allow_html=True
                 )
             # ✅ Before your login form
-            loading_placeholder = st.empty()
-            loading_placeholder.info("⏳ Loading authentication...")
+            #loading_placeholder = st.empty()
+            #loading_placeholder.info("⏳ Loading authentication...")
             with st.form("login_form"):
                 username = st.text_input("User ID")
                 password = st.text_input("Password", type="password")
@@ -634,7 +634,7 @@ def login():
                     submitted = st.form_submit_button("Login")
 
             st.markdown('</div>', unsafe_allow_html=True)
-            loading_placeholder.empty()
+            #loading_placeholder.empty()
     if not submitted:
         st.stop()
         #return    
