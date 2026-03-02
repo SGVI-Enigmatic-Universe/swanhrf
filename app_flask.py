@@ -2,6 +2,8 @@ from flask import Flask, render_template
 import subprocess
 import threading
 import os
+import requests
+from flask import Response
 
 app = Flask(__name__)
 
@@ -16,10 +18,12 @@ def run_streamlit():
 def home():
     return render_template("index.html")
 
-if __name__ == "__main__":
-    # Start Streamlit in background
-    threading.Thread(target=run_streamlit).start()
+@app.route("/streamlit")
+def streamlit_proxy():
+    resp = requests.get("http://127.0.0.1:8501")
+    return Response(resp.content, content_type=resp.headers['Content-Type'])
 
-    # Use Azure-assigned port
+if __name__ == "__main__":
+    threading.Thread(target=run_streamlit).start()
     port = int(os.environ.get("PORT", 8000))
     app.run(host="0.0.0.0", port=port)
