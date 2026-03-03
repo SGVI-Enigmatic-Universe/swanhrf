@@ -25,28 +25,33 @@ import threading
 #py -3.11 -m pipreqs.pipreqs "S:/swan_survey"--force
 
 st.set_page_config(page_title="SWAN Status", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded", menu_items=None)
-
-#st.markdown("<style>.block-container {max-width: 1400px; min-width: 1400px; margin-left: 80px;}</style>", unsafe_allow_html=True)
-#st.markdown("<style>.block-container {max-width: 1150px; min-width: 1150px; margin: auto;} </style>", unsafe_allow_html=True)
 st.markdown("""
 <style>
-.app-view-container {
-    width: 100% !important;
-    max-width: 1150px !important; /* Adjust as needed */
-        }
-.main-wrapper {
-    overflow-x: auto;
-}
-.block-container {
-    max-width: 1150px;
+/* Container wrapper */
+.fit-container {
+    width: 1150px;          /* fixed design width */
     min-width: 1150px;
+    max-width: 1150px;
     margin: auto;
+    transform-origin: top left;
+}
+
+/* Scale proportionally for small screens */
+@media (max-width: 1150px) {
+    .fit-container {
+        transform: scale(max(0.1, calc(100vw / 1150)));   /* scale everything to fit viewport width */
+        width: 1150px;                          /* keep design width for layout */
+    }
 }
 </style>
 """, unsafe_allow_html=True)
+st.markdown('<div class="fit-container">', unsafe_allow_html=True)
 
-st.markdown('<div class="main-wrapper">', unsafe_allow_html=True)
+# ---- YOUR ENTIRE STREAMLIT APP HERE ----
 
+
+#st.markdown("<style>.block-container {max-width: 1400px; min-width: 1400px; margin-left: 80px;}</style>", unsafe_allow_html=True)
+st.markdown("<style>.block-container {max-width: 1150px; min-width: 1150px; margin: auto;}</style>", unsafe_allow_html=True)
 st.markdown("<style>section[data-testid='stMain'] {padding-top: 0rem !important;}</style>", unsafe_allow_html=True)
 st.markdown("<style>section[data-testid='stMain'] > div {padding-top: 0rem !important;}</style>", unsafe_allow_html=True)
 #st.markdown("<h1 style='margin-top:0rem;'>Tamil Nadu (District-wise) SWAN Survey Summary</h1>", unsafe_allow_html=True)
@@ -642,8 +647,8 @@ def login():
                     unsafe_allow_html=True
                 )
             # ✅ Before your login form
-            #loading_placeholder = st.empty()
-            #loading_placeholder.info("⏳ Loading authentication...")
+            loading_placeholder = st.empty()
+            loading_placeholder.info("⏳ Loading authentication...")
             with st.form("login_form"):
                 username = st.text_input("User ID")
                 password = st.text_input("Password", type="password")
@@ -653,7 +658,7 @@ def login():
                     submitted = st.form_submit_button("Login")
 
             st.markdown('</div>', unsafe_allow_html=True)
-            #loading_placeholder.empty()
+            loading_placeholder.empty()
     if not submitted:
         st.stop()
         #return    
@@ -964,6 +969,17 @@ if page == "Overview":
         <div style="font-size:30px; line-height:1; margin:0; margin-top:0px; margin-bottom:0px;">{total_submissions}</div>
         </div>
         </div>""", unsafe_allow_html=True)
+        
+        sheet_id = "1dlxiNuYJlaBv5BSpeBzZmuPDgcMUNsSBSB8DrKkNNp8"
+        sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+        df_ent = pd.read_csv(sheet_url)
+        df_ent.columns = df_ent.columns.str.strip()
+        # Ensure 'Received' column exists and is numeric
+        if "Status" in df_ent.columns:
+            total_received = df_ent[df_ent["Status"] == "Received"].shape[0]
+        else:
+            total_received = 0
+        total_received_formatted = f"{total_received:,}"
         st.markdown(f"""<div style="display:flex;">
         <div style="flex:1; aspect-ratio: 3 /1 ; border-radius:14px; color:white; font-weight:600; box-shadow:0 4px 10px rgba(0,0,0,0.15); text-align:center; background: linear-gradient(135deg, #6a0dad, #6a0dad);
                     display:flex;
@@ -974,7 +990,7 @@ if page == "Overview":
                     box-sizing: border-box;
                     margin-bottom:30px;">
         <div style="font-size:20px; line-height:1.1; margin-bottom:0px; opacity:0.9;">Total Entitlements</div>
-        <div style="font-size:30px; line-height:1; margin:0; margin-top:0px; margin-bottom:0px;">......</div>
+        <div style="font-size:30px; line-height:1; margin:0; margin-top:0px; margin-bottom:0px;">{total_received_formatted}</div>
         </div>
         </div>""", unsafe_allow_html=True)
     @st.cache_data(show_spinner=False)
@@ -3724,4 +3740,4 @@ elif selected == "Manage Users" and st.session_state.get("role") == "admin":
         edited_df.to_excel(USER_FILE, index=False)
         st.success("Changes saved successfully!")
 
-st.markdown('</div>', unsafe_allow_html=True)
+
