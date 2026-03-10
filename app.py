@@ -27,22 +27,14 @@ import threading
 st.set_page_config(page_title="SWAN Status", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded", menu_items=None)
 st.markdown("""
 <style>
-/* Container wrapper */
 .fit-container {
-    width: 1150px;          /* fixed design width */
+    width: 100%;          /* fixed design width */
     min-width: 1150px;
     max-width: 1150px;
     margin: auto;
-    transform-origin: top left;
+    transform-origin: top center;
 }
 
-/* Scale proportionally for small screens */
-@media (max-width: 1150px) {
-    .fit-container {
-        transform: scale(max(0.1, calc(100vw / 1150)));   /* scale everything to fit viewport width */
-        width: 1150px;                          /* keep design width for layout */
-    }
-}
 </style>
 """, unsafe_allow_html=True)
 st.markdown('<div class="fit-container">', unsafe_allow_html=True)
@@ -838,7 +830,7 @@ SYSTEM_COLS = [
     "location_start", "location_end",
     "start", "end", "age", "_location_start_latitude", 
     "_location_start_longitude", "_location_start_altitude", 
-    "_location_start_precision", "_id", "_uuid", "_submission_time",
+    "_location_start_precision", "_id", "_uuid", "_uuid.1", "_submission_time",
     "_validation_status", "_notes", "_status", "_submitted_by",
     "__version__", "_tags", "_index", "has_real_data", "all_sel",
     "3.உங்கள் தற்போதைய இருப்பிடம்: ${location_start}"
@@ -858,14 +850,22 @@ columns_in_order = [c for c in df.columns if c not in SYSTEM_COLS]
 options = ["Overview", "Submissions", "Dashboard", "Entitlements"]
 icons = ["file-earmark-text", "stack-overflow", "bar-chart-line", "file-person"]
 
+UserID = st.session_state.get("user")
+role = st.session_state.get("role")
+
+users_df = pd.read_excel(USER_FILE)  # or wherever your users are stored
+
 # 2️⃣ Add admin-only page
 if st.session_state.get("role") == "admin":
     options.append("User Activity")
     icons.append("file-earmark-lock2")  # icon for user activity
     options.append("Add New Users")
     icons.append("person-plus")
+# Only HRF Super Admin
+if role == "admin" and UserID == "hrfadmin" :
     options.append("Manage Users")
     icons.append("people")
+    
 with st.sidebar:
     selected = option_menu(
         menu_title="Menu 🔎",
@@ -1171,18 +1171,6 @@ if page == "Overview":
 # SUBMISSIONS PAGE
 # =====================
 elif page == "Submissions":
-    # ✅ Before your login form
-    #loading_placeholder = st.empty()
-    #loading_placeholder.info("⏳ Loading authentication...")
-
-    # Your existing login form code here
-    # with st.form("login_form"):
-    #     username = st.text_input("Username")
-    #     password = st.text_input("Password", type="password")
-    #     submitted = st.form_submit_button("Login")
-
-    # ✅ Once form is rendered, remove placeholder
-    #loading_placeholder.empty()
     if "login_ready" not in st.session_state:
         placeholder = st.empty()
         with placeholder.container():
@@ -1197,22 +1185,6 @@ elif page == "Submissions":
             login()
         st.stop()
         
-    # Require login first
-    # if "login_ready" not in st.session_state:
-    #     st.session_state.login_ready = False
-    #     with st.spinner("Loading secure login..."):
-    #         time.sleep(0.8)
-    #     st.session_state.login_ready = True
-    #     st.rerun()
-    # if not st.session_state.authenticated:
-    #     login()
-    #     st.stop()
-  
-    #ngo_name = st.session_state.get("ngo_name", "")
-    #st.title(f"Greetings! {ngo_name}")
-    #district = st.session_state.get("district", "Unknown")
-    
-    #st.title(f"Greetings! {st.session_state.get('ngo_name','')}")
     is_admin = st.session_state.get("role") == "admin"
     english_to_tamil = {v: k for k, v in DISTRICT_MAP.items()}  # invert your dict
 
@@ -1236,12 +1208,7 @@ elif page == "Submissions":
         </h2>
     </div>
     """, unsafe_allow_html=True)
-    # Filter data for this user's NGO
-    # if st.session_state.get("role") != "admin":
-    #     filtered_df = df[df[NGO_COL] == st.session_state.get("ngo_name", "")]
-    #     filtered_df = df[(df[DISTRICT_COL] == district) & (df[NGO_COL] == ngo_name)]
-    # else:
-    #     filtered_df = df.copy()
+   
     if st.session_state.get("role") != "admin":
         df_user = df[(df[DISTRICT_COL] == user_district_ta) & (df[NGO_COL] == st.session_state.get("ngo_name", ""))]
     else:
@@ -1250,29 +1217,9 @@ elif page == "Submissions":
 # SIDEBAR
 # =====================
     st.sidebar.write("Filters")
-    #filtered_df = df
-# ---- District
-#     district_vals = sorted(df_user[DISTRICT_COL].dropna().unique().tolist())
-#     district_vals = [str(d).strip() for d in district_vals]
-    
-#     default_districts = [user_district] if (not is_admin and user_district in district_vals) else district_vals
-#     sel_district = st.sidebar.multiselect(DISTRICT_COL, district_vals, default=default_districts)
-# # ---- Handle All
-#     # if not sel_district or "All" in sel_district:
-#     #     filtered_df = df.copy()  # no filtering → ALL rows
-#     # else:
-#     #     filtered_df = df[df[DISTRICT_COL].isin(sel_district)]
-# # ---- NGO (only actual NGOs, no "All")
-#     ngo_vals = sorted(df_user[NGO_COL].dropna().unique().tolist())
-#     ngo_vals = [str(n).strip() for n in ngo_vals]
-    
-#     default_ngos = [user_ngo] if (not is_admin and user_ngo in ngo_vals) else ngo_vals
-#     sel_ngo = st.sidebar.multiselect(NGO_COL, ngo_vals, default=default_ngos)
     # Start from full user dataframe
     df_temp = df_user.copy()
-    # Start from full user dataframe
-    
-
+    selected_filters = {}
     # --- Compute available options dynamically
     if sel_ngo := st.session_state.get("ngo_filter"):  # if NGO already selected
         district_vals = sorted(df_temp[df_temp[NGO_COL].isin(sel_ngo)][DISTRICT_COL].dropna().unique())
@@ -1291,73 +1238,14 @@ elif page == "Submissions":
     default_ngos_sidebar = [user_ngo] if (not is_admin and user_ngo in ngo_vals) else []
 
     # --- Sidebar multiselects
-    sel_district = st.sidebar.multiselect(
-        DISTRICT_COL, district_vals, default=default_districts_sidebar, key="district_filter"
-    )
-    sel_ngo = st.sidebar.multiselect(
-        NGO_COL, ngo_vals, default=default_ngos_sidebar, key="ngo_filter"
-    )
-
+    sel_district = st.sidebar.multiselect(DISTRICT_COL, district_vals, default=default_districts_sidebar, key="district_filter")
+    sel_ngo = st.sidebar.multiselect(NGO_COL, ngo_vals, default=default_ngos_sidebar, key="ngo_filter")
+    
     # --- Apply final filtering
     mask_district = df_user[DISTRICT_COL].isin(sel_district) if sel_district else pd.Series(True, index=df_user.index)
     mask_ngo = df_user[NGO_COL].isin(sel_ngo) if sel_ngo else pd.Series(True, index=df_user.index)
     df_user = df_user[mask_district & mask_ngo]
-    # district_vals = sorted(df_temp[DISTRICT_COL].dropna().unique().tolist())
-    # district_vals = [str(d).strip() for d in district_vals]
-
-    # # 4️⃣ NGO options
-    # ngo_vals = sorted(df_temp[NGO_COL].dropna().unique().tolist())
-    # ngo_vals = [str(n).strip() for n in ngo_vals]
-
-    # # 5️⃣ Set defaults
-    # #default_districts = [user_district_ta] if (st.session_state.get("role") != "admin" and user_district_ta in district_vals) else district_vals
-    # #default_ngos = [st.session_state.get("ngo_name","")] if (st.session_state.get("role") != "admin" and st.session_state.get("ngo_name","") in ngo_vals) else ngo_vals
-
-    # # 6️⃣ Sidebar multiselects with unique keys
-    # # sel_district = st.sidebar.multiselect(DISTRICT_COL, district_vals, default=default_districts, key="district_filter")
-    # # sel_ngo = st.sidebar.multiselect(NGO_COL, ngo_vals, default=default_ngos, key="ngo_filter")
-    # # Set defaults for non-admin
-    # default_districts_sidebar = [user_district_ta] if (not is_admin and user_district_ta in district_vals) else []
-    # default_ngos_sidebar = [user_ngo] if (not is_admin and user_ngo in ngo_vals) else []
-
     
-    
-    # # default_districts_sidebar = default_districts if st.session_state.get("role") != "admin" else []
-    # # default_ngos_sidebar = default_ngos if st.session_state.get("role") != "admin" else []
-
-    # sel_district = st.sidebar.multiselect(
-    #     DISTRICT_COL, district_vals, default=default_districts_sidebar, key="district_filter")
-    # sel_ngo = st.sidebar.multiselect(
-    #     NGO_COL, ngo_vals, default=default_ngos_sidebar, key="ngo_filter")
-    # if sel_district:
-    #     df_temp = df_temp[df_temp[DISTRICT_COL].isin(sel_district)]
-    #     ngo_vals = sorted(df_temp[NGO_COL].dropna().unique().tolist())
-    #     ngo_vals = [str(n).strip() for n in ngo_vals]
-    # if sel_ngo:
-    #     df_temp = df_temp[df_temp[NGO_COL].isin(sel_ngo)]
-    #     district_vals = sorted(df_temp[DISTRICT_COL].dropna().unique().tolist())
-    #     district_vals = [str(d).strip() for d in district_vals]
-    # mask_district = df_user[DISTRICT_COL].isin(sel_district) if sel_district else pd.Series(True, index=df_user.index)
-    # mask_ngo = df_user[NGO_COL].isin(sel_ngo) if sel_ngo else pd.Series(True, index=df_user.index)
-    # df_user = df_user[mask_district & mask_ngo]
-    # if sel_district and (not is_admin):
-    #     df_user = df_user[df_user[DISTRICT_COL].isin(sel_district)]
-    # if sel_ngo and (not is_admin):
-    #     df_user = df_user[df_user[NGO_COL].isin(sel_ngo)]
-    # mask = pd.Series(True, index=df_user.index)
-    # if sel_district:
-    #     mask &= df_user[DISTRICT_COL].isin(sel_district)
-    # if sel_ngo:
-    #     mask &= df_user[NGO_COL].isin(sel_ngo)
-    # filtered_df = df_user[mask].copy()
-    # if sel_ngo:
-    #     filtered_df = filtered_df[filtered_df[NGO_COL].isin(sel_ngo)]
-    # else:
-    #     ngo_vals = sorted(df[NGO_COL].dropna().unique().tolist())
-    # st.sidebar.divider()
-
-    #min_date_py = filtered_df['end'].dropna().min().date()
-    #max_date_py = filtered_df['end'].dropna().max().date()
     filtered_df = df_user.copy()
     valid_dates = filtered_df['end'].dropna()
     if not valid_dates.empty:
@@ -1393,19 +1281,6 @@ elif page == "Submissions":
     month_counts['Month'] = month_counts['Month'].dt.strftime('%b %Y')
     month_counts = month_counts.sort_values('Month').reset_index(drop=True)
     month_counts.insert(0, "            #", range(1, len(month_counts)+1))
-# Create Month-Year column
-#     filtered_df['Month'] = filtered_df['end'].dt.to_period('M').dt.to_timestamp()
-#     filtered_df['Month'] = filtered_df['Month'].dt.strftime('%b %Y')
-# # Group by month
-#     month_counts = filtered_df.groupby('Month').size().reset_index(name='Submitted')
-# # Sort months chronologically
-#     month_counts['Month_TS'] = pd.to_datetime(month_counts['Month'], format='%b %Y')
-#     month_counts = month_counts.sort_values('Month_TS').drop(columns='Month_TS')
-# # Reset index to start from 1
-#     month_counts = month_counts.reset_index(drop=True)
-# # Add serial number column
-#     month_counts.insert(0, "            #", range(1, len(month_counts) + 1))
-
 # =====================
 # QUESTION FILTERS (SINGLE PASS, EXCEL ORDER)
 # =====================
@@ -1422,12 +1297,12 @@ elif page == "Submissions":
         mask &= filtered_df[DISTRICT_COL].isin(sel_district)
     if sel_ngo:
         mask &= filtered_df[NGO_COL].isin(sel_ngo)
-        
     rendered_multi = set()
-
+    selected_filters = {DISTRICT_COL: sel_district, NGO_COL: sel_ngo}
     for col in columns_in_order:
         if col in [DISTRICT_COL, NGO_COL]:
             continue
+        df_for_options = filtered_df[mask].copy()
         if "/" in col:
             question = col.split("/", 1)[0]
             if question in rendered_multi:
@@ -1446,13 +1321,16 @@ elif page == "Submissions":
     
         # -------- SINGLE-SELECT / INTEGER / TEXT
         else:
-            options = filtered_df[col].dropna().unique().tolist()
+            #df_current = filtered_df[mask]
+            options = df_for_options[col].dropna().unique().tolist()
             if not options:
                 continue
             options_sorted = sorted(options, key=lambda x: str(x).lower())
             selected = st.sidebar.multiselect(col, ["All"] + options_sorted, key=f"filter_{col}")
             if selected and "All" not in selected:
-                mask &= filtered_df[col].isin(selected)
+                mask &= df_for_options[col].isin(selected)
+                selected_filters[col] = selected
+    
     filtered_df = filtered_df[mask].copy()  # only filter once
 # -------------------------------
 # Filter for selected date range # Show total submissions in selected range
@@ -1554,14 +1432,6 @@ elif page == "Submissions":
 
         {html_table}
         """, height=250, scrolling=False)
-        #st.dataframe(month_counts, hide_index=True)
-        # Transparent-style dataframe
-        # st.dataframe(
-        #     month_counts.style.set_table_styles([
-        #         {"selector": "thead", "props": [("background-color", "rgba(255,255,255,0)")]},
-        #         {"selector": "tbody", "props": [("background-color", "rgba(255,255,255,0)")]},]),
-        #     hide_index=True,
-        #     use_container_width=True)
 
     with col3:
         st.title(" ")
@@ -1602,12 +1472,7 @@ elif page == "Submissions":
 # DISPLAY TABLE
 # =====================
     st.write("கணக்கெடுப்பு தரவு")
-    #filtered_df = filtered_df[[c for c in filtered_df.columns if c not in SYSTEM_COLS]]
-    # Index from 1
-    # filtered_df = filtered_range_df
-    # filtered_df = filtered_df[[c for c in filtered_df.columns if c not in SYSTEM_COLS]]
-    # filtered_df = filtered_df.reset_index(drop=True)
-    # filtered_df.index = filtered_df.index + 1
+    
     @st.cache_data(show_spinner=False)
     def get_display_df(filtered_df):
         df_to_show = filtered_df[[c for c in filtered_df.columns if c not in SYSTEM_COLS]].copy()
@@ -1616,17 +1481,6 @@ elif page == "Submissions":
 
     display_df = get_display_df(filtered_df)
     
-    # @st.cache_data(show_spinner=False)
-    # def get_display_df(filtered_range_df):
-    #     df_to_show = filtered_range_df.copy()
-    #     df_to_show = df_to_show[[c for c in df_to_show.columns if c not in SYSTEM_COLS]]
-    #     df_to_show = df_to_show.reset_index(drop=True)
-    #     df_to_show.index = df_to_show.index + 1
-    #     return df_to_show
-
-    # Use cached version for rendering
-    #display_df = get_display_df(filtered_range_df)
-    #if "viewed_submissions_logged" not in st.session_state:
     log_user_activity(
         st.session_state.user,
         st.session_state.ngo_name,
@@ -1645,36 +1499,45 @@ elif page == "Submissions":
             "Applied Filters")
         st.session_state.filters_logged = True
             
-    # excel_buffer = io.BytesIO()
-    # with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
-    #     display_df.to_excel(writer, index=False, sheet_name="Submissions")
-    # excel_buffer.seek(0)
-    # Custom download button
-    
     # 1️⃣ Prepare filename with timestamp (safe)
     now_str = datetime.now().strftime("%d-%m-%Y %H-%M-%S")
     file_name = f"{st.session_state.ngo_name}_submissions ({now_str}).xlsx"
-
+    # Capture session state values
+    user = st.session_state.get("user", "unknown")
+    ngo_name = st.session_state.get("ngo_name", "unknown")
+    district = st.session_state.get("district", "unknown")
+    # Make a copy so you don't modify original
+    df_to_display = filtered_range_df[[c for c in filtered_range_df.columns if c not in SYSTEM_COLS]].copy()
+    # Reset index starting from 1
+    df_to_display.reset_index(drop=True, inplace=True)
+    df_to_display.index += 1  # Optional: start index at 1 instead of 0
+    
+    dob_col = "6.பிறந்த தேதி (அடையாள அட்டையின் படி)"
+    if dob_col in df_to_display.columns:
+        # Ensure it's datetime first
+        df_to_display[dob_col] = pd.to_datetime(df_to_display[dob_col], errors="coerce")
+        # Format as YYYY-MM-DD (drop time)
+        df_to_display[dob_col] = df_to_display[dob_col].dt.strftime("%d-%m-%Y")
     # 2️⃣ Lazy download using a lambda for data
     st.download_button(
         label="⬇️ Download Excel",
-        data=lambda: create_excel_bytes(display_df),
+        data=lambda: create_excel_bytes(df_to_display, user, ngo_name, district),
         file_name=file_name,
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         key="download_excel"
     )
 
     # --- helper function
-    def create_excel_bytes(df):
+    def create_excel_bytes(df, user, ngo_name, district):
         excel_buffer = io.BytesIO()
         with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
             df.to_excel(writer, index=False, sheet_name="Submissions")
         excel_buffer.seek(0)
         # log download AFTER creating the file
         log_user_activity(
-            st.session_state.user,
-            st.session_state.ngo_name,
-            st.session_state.district,
+            user,
+            ngo_name,
+            district,
             "Downloaded Excel"
         )
         return excel_buffer.getvalue()  # return bytes
@@ -1690,9 +1553,9 @@ elif page == "Submissions":
     }
     </style>
     """, unsafe_allow_html=True)
-
-    st.dataframe(display_df, use_container_width=True)
-    st.caption(f"மொத்த பதிவுகள்: {len(display_df)}")   
+    
+    st.dataframe(df_to_display, use_container_width=True)
+    st.caption(f"மொத்த பதிவுகள்: {len(df_to_display)}")   
     # --- Ensure DOB column is datetime AFTER filtering
 
 # =====================
@@ -2814,6 +2677,12 @@ elif page == "Dashboard":
 # USER ACTIVITY PAGE (Admin Only)
 # =====================
 elif page == "User Activity": 
+    log_user_activity(
+        st.session_state.user,
+        st.session_state.ngo_name,
+        st.session_state.district,
+        "User Activity Logs"
+    )
     # sheet_idul = "1y-m_sSp9Oi8w93YLit9QKamzCel0mYy5JSxV63-i_F0"
     # USER_LOGS_FILE = f"https://docs.google.com/spreadsheets/d/{sheet_idul}/export?format=csv"
     USER_LOGS_FILE = "userlogs.csv"
@@ -2827,46 +2696,63 @@ elif page == "User Activity":
 
     st.title("📝 User Activity Logs")
     
-    if "user_logs_df" not in st.session_state:
-        if os.path.exists(USER_LOGS_FILE):
-            df = pd.read_csv(USER_LOGS_FILE)
-         
-            df = df.drop(columns=["S.N."], errors="ignore")
-        else:
-            df = pd.DataFrame(columns=[
-                "NGO", "District", "Username",
-                "Login at", "Logout at", "Login_DT", "Logout_DT",
-                "Event_DT", "Duration (mins)", "Activity"])    
+    #if "user_logs_df" not in st.session_state:
+    if os.path.exists(USER_LOGS_FILE):
+        df = pd.read_csv(USER_LOGS_FILE)
+        
+        df = df.drop(columns=["S.N."], errors="ignore")
+    else:
+        df = pd.DataFrame(columns=[
+            "NGO", "District", "Username",
+            "Login at", "Logout at", "Login_DT", "Logout_DT",
+            "Event_DT", "Duration (mins)", "Activity"])    
 
-        df["Login_DT"] = pd.to_datetime(
-            df.get("Login at"),
-            format="%d-%b-%Y@%I:%M:%S%p",
-            errors="coerce"
-        )
-        df["Logout_DT"] = pd.to_datetime(
-            df.get("Logout at"),
-            format="%d-%b-%Y@%I:%M:%S%p",
-            errors="coerce"
-        )
-        df["Event_DT"] = pd.to_datetime(df.get("Event_DT"), errors="coerce")
+    df["Login_DT"] = pd.to_datetime(
+        df.get("Login at"),
+        format="%d-%b-%Y@%I:%M:%S%p",
+        errors="coerce"
+    )
+    df["Logout_DT"] = pd.to_datetime(
+        df.get("Logout at"),
+        format="%d-%b-%Y@%I:%M:%S%p",
+        errors="coerce"
+    )
+    df["Event_DT"] = pd.to_datetime(df.get("Event_DT"), errors="coerce")
 
-        st.session_state.user_logs_df = df    
-    df = st.session_state.user_logs_df.copy()  
-    
-    # df["Activity"] = df["Activity"].astype(str).str.strip()
-    # df["NGO"] = df["NGO"].astype(str).str.strip()
-    # df["District"] = df["District"].astype(str).str.strip()
-    # df["Username"] = df["Username"].astype(str).str.strip()
+    #st.session_state.user_logs_df = df    
+    #df = st.session_state.user_logs_df.copy()  
+    df = df.copy()
+    df["Login_DT"] = pd.to_datetime(
+        df["Login at"],
+        format="%d-%b-%Y@%I:%M:%S%p",
+        errors="coerce"
+    ).dt.tz_localize(None).dt.tz_localize("Asia/Kolkata")
+
+    df["Logout_DT"] = pd.to_datetime(
+        df["Logout at"],
+        format="%d-%b-%Y@%I:%M:%S%p",
+        errors="coerce"
+    ).dt.tz_localize(None).dt.tz_localize("Asia/Kolkata")
+
+    df["Event_DT"] = pd.to_datetime(
+        df["Event_DT"],
+        errors="coerce"
+    ).dt.tz_localize(None).dt.tz_localize("Asia/Kolkata")
+                        
     # Apply UTC+5:30 offset for Azure deployment
-    time_delta = pd.Timedelta(hours=5, minutes=30)
-    df["Login_DT"] = pd.to_datetime(df["Login_DT"], errors="coerce") + time_delta
-    df["Logout_DT"] = pd.to_datetime(df["Logout_DT"], errors="coerce") + time_delta
-    df["Event_DT"] = pd.to_datetime(df["Event_DT"], errors="coerce") + time_delta
+    # time_delta = pd.Timedelta(hours=5, minutes=30)
+    # df["Login_DT"] = pd.to_datetime(df["Login_DT"], errors="coerce") + time_delta
+    # df["Logout_DT"] = pd.to_datetime(df["Logout_DT"], errors="coerce") + time_delta
+    # df["Event_DT"] = pd.to_datetime(df["Event_DT"], errors="coerce") + time_delta
     #df["Event_Date"] = df["Event_DT"].dt.date
     # Filters
     col1, col2, col3, col4, col5, col6 = st.columns([0.8,0.8,0.8,0.5,0.5,0.5])
     with col1:
-        selected_district = st.selectbox("Filter by District",sorted(df['District'].dropna().unique().tolist()))
+        district_list = sorted(df['District'].dropna().unique().tolist())
+        if "All" not in district_list:
+            district_list = ["All"] + district_list
+        selected_district = st.selectbox("Filter by District", district_list)
+        #selected_district = st.selectbox("Filter by District",["All"]+sorted(df['District'].dropna().unique().tolist()))
     with col2:
         if selected_district == "All":
             ngos_options = ["All"] + sorted(df['NGO'].dropna().unique())
@@ -2890,16 +2776,21 @@ elif page == "User Activity":
 
     logs_df = df.copy()
     # Convert date inputs to datetime at midnight for safe comparison
-    start_dt = pd.to_datetime(start_date)
-    end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
-    
+    #start_dt = pd.to_datetime(start_date)
+    #end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+    start_dt = pd.Timestamp(start_date, tz="Asia/Kolkata")
+    end_dt = (
+        pd.Timestamp(end_date, tz="Asia/Kolkata")
+        + pd.Timedelta(days=1)
+        - pd.Timedelta(seconds=1)
+    )
     if "Event_DT" not in df.columns:
         df["Event_DT"] = pd.NaT
 
     df.loc[df["Event_DT"].isna() & df["Login_DT"].notna(), "Event_DT"] = df["Login_DT"]
     df.loc[df["Event_DT"].isna() & df["Logout_DT"].notna(), "Event_DT"] = df["Logout_DT"]
     
-    df["Event_DT"] = pd.to_datetime(df["Event_DT"], errors="coerce")
+    #df["Event_DT"] = pd.to_datetime(df["Event_DT"], errors="coerce")
     
     # logs_df = df[
     #     df["Event_DT"].notna() &
@@ -2926,8 +2817,8 @@ elif page == "User Activity":
         ((logs_df["Event_DT"].notna() & (logs_df["Event_DT"] >= start_dt) & (logs_df["Event_DT"] <= end_dt)) |
         (logs_df["Event_DT"].isna()))
     ]
-    logs_df["Login_DT"] = pd.to_datetime(logs_df["Login_DT"], errors="coerce")
-    logs_df["Logout_DT"] = pd.to_datetime(logs_df["Logout_DT"], errors="coerce")
+    #logs_df["Login_DT"] = pd.to_datetime(logs_df["Login_DT"], errors="coerce")
+    #logs_df["Logout_DT"] = pd.to_datetime(logs_df["Logout_DT"], errors="coerce")
 
     mask = logs_df["Activity"] == "Login"
 
@@ -2957,7 +2848,7 @@ elif page == "User Activity":
         logs_df_display["Activity Time"] = logs_df_display["Event_DT"].dt.strftime(
             "%d-%b-%Y@%I:%M:%S%p"
         )
-
+        logs_df_display["Event TL"] = logs_df_display["Event_DT"].dt.strftime("%I:%M:%S %p")
         logs_df_display = logs_df_display[[
             "S.N.",
             "NGO",
@@ -2965,8 +2856,9 @@ elif page == "User Activity":
             "Username",
             "Activity",
             "Login at",
-            "Logout at",
-            "Duration (mins)",
+            #"Logout at",
+            #"Duration (mins)",
+            "Event TL"
         ]]
 
         st.markdown("""
@@ -3006,18 +2898,8 @@ elif page == "User Activity":
     else:
         st.info("No user activity records found for the selected filters.")
     
-    csv_df = pd.read_csv(USER_LOGS_FILE)
-    # st.write("CSV – last 10 rows", csv_df.tail(10))
-    # st.write("Session rows:", len(st.session_state.user_logs_df))
-    # st.write("CSV rows:", len(pd.read_csv(USER_LOGS_FILE)))
-    #st.write(df[df["Activity"] == "Evidence Upload"][["Activity","Event_DT"]])
-    #st.write(df["Activity"].unique())
-    #st.write(logs_df["Activity"].apply(repr).unique())
-    #st.write(df[df["Activity"] == "Evidence Upload"][["Event_DT"]])
-    #st.write("START:", start_dt)
-    #st.write("END:", end_dt)
-
-    # st.write(df[df["Activity"] == "Evidence Upload"][["Event_DT"]].sort_values("Event_DT"))
+    #csv_df = pd.read_csv(USER_LOGS_FILE)
+    
 #------------------------------------------------------
 #Entitlements page
 elif page == "Entitlements":
@@ -3671,10 +3553,10 @@ elif selected == "Add New Users" and st.session_state.get("role") == "admin":
             df.to_excel(file_path, index=False)
             print("✅ Unhashed passwords fixed")
 
-
+    role = st.selectbox("Select Role", ["user", "admin"])
     district = st.selectbox("Select District", list(district_codes.keys()))
     ngo_name = st.text_input("NGO Name")
-
+    
     if district:
         dcode = district_codes[district]
         auto_userid = get_next_userid(district, dcode)
@@ -3687,7 +3569,12 @@ elif selected == "Add New Users" and st.session_state.get("role") == "admin":
         active = st.selectbox("Active Status", [1, 0])
 
         if st.button("Create User"):
-
+            log_user_activity(
+                st.session_state.user,
+                st.session_state.ngo_name,
+                st.session_state.district,
+                "Added User(s)"
+            )
             df = pd.read_excel(USER_FILE)
 
             if userid in df["UserID"].values:
@@ -3701,7 +3588,7 @@ elif selected == "Add New Users" and st.session_state.get("role") == "admin":
                 
                 new_row = {
                     "#": next_serial,
-                    "Role": "user",
+                    "Role": role,
                     "District": district,
                     "NGO": ngo_name,
                     "UserID": userid,
@@ -3718,6 +3605,12 @@ elif selected == "Add New Users" and st.session_state.get("role") == "admin":
                 st.success(f"User {userid} created successfully with serial {next_serial}!")
                 
         if st.button("💥Refresh app and user data!"):
+            log_user_activity(
+                st.session_state.user,
+                st.session_state.ngo_name,
+                st.session_state.district,
+                "Refreshed Users"
+            )
         # Clear all session state keys
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
@@ -3731,12 +3624,28 @@ elif selected == "Add New Users" and st.session_state.get("role") == "admin":
             st.session_state.reset_done = True
             # Rerun the app
             st.rerun()
-                        
-elif selected == "Manage Users" and st.session_state.get("role") == "admin":
+        #st.write("DEBUG:", st.session_state.get("user"), st.session_state.get("role"), st.session_state.get("district"))
+                     
+elif selected == "Manage Users" and st.session_state.get("role") == "admin" and st.session_state.get("user") == "hrfadmin":
+    if not st.session_state.get("authenticated", False):
+        login()
+        st.stop()  # stop until user logs in
+    log_user_activity(
+        st.session_state.user,
+        st.session_state.ngo_name,
+        st.session_state.district,
+        "Manage User Page"
+    )
     st.markdown("<div style='text-align:center; margin-top:-100px; margin-bottom:0px;'><h2 style='font-size:30px; color:#6a0dad'>👥 Manage Users</h2></div>", unsafe_allow_html=True)
     df = pd.read_excel(USER_FILE)
     edited_df = st.data_editor(df, num_rows="dynamic")
     if st.button("Save Changes"):
+        log_user_activity(
+            st.session_state.user,
+            st.session_state.ngo_name,
+            st.session_state.district,
+            "Changes in Users"
+        )
         edited_df.to_excel(USER_FILE, index=False)
         st.success("Changes saved successfully!")
 
