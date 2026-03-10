@@ -2726,18 +2726,18 @@ elif page == "User Activity":
         df["Login at"],
         format="%d-%b-%Y@%I:%M:%S%p",
         errors="coerce"
-    ).dt.tz_localize(None).dt.tz_localize("Asia/Kolkata")
+    ).dt.tz_localize("Asia/Kolkata")
 
     df["Logout_DT"] = pd.to_datetime(
         df["Logout at"],
         format="%d-%b-%Y@%I:%M:%S%p",
         errors="coerce"
-    ).dt.tz_localize(None).dt.tz_localize("Asia/Kolkata")
+    ).dt.tz_localize("Asia/Kolkata")
 
     df["Event_DT"] = pd.to_datetime(
         df["Event_DT"],
         errors="coerce"
-    ).dt.tz_localize(None).dt.tz_localize("Asia/Kolkata")
+    ).dt.tz_localize("Asia/Kolkata")
                         
     # Apply UTC+5:30 offset for Azure deployment
     # time_delta = pd.Timedelta(hours=5, minutes=30)
@@ -3648,5 +3648,6 @@ elif selected == "Manage Users" and st.session_state.get("role") == "admin" and 
         )
         edited_df.to_excel(USER_FILE, index=False)
         st.success("Changes saved successfully!")
+
 
 
