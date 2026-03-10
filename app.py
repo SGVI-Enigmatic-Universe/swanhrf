@@ -2683,8 +2683,6 @@ elif page == "User Activity":
         st.session_state.district,
         "User Activity Logs"
     )
-    # sheet_idul = "1y-m_sSp9Oi8w93YLit9QKamzCel0mYy5JSxV63-i_F0"
-    # USER_LOGS_FILE = f"https://docs.google.com/spreadsheets/d/{sheet_idul}/export?format=csv"
     USER_LOGS_FILE = "userlogs.csv"
     if not st.session_state.get("authenticated", False):
         login()
@@ -2694,56 +2692,37 @@ elif page == "User Activity":
         st.warning("⚠️ Only admin users can access this page.")
         st.stop()
 
-    st.title("📝 User Activity Logs")
-    
-    #if "user_logs_df" not in st.session_state:
-    if os.path.exists(USER_LOGS_FILE):
-        df = pd.read_csv(USER_LOGS_FILE)
-        
-        df = df.drop(columns=["S.N."], errors="ignore")
-    else:
-        df = pd.DataFrame(columns=[
-            "NGO", "District", "Username",
-            "Login at", "Logout at", "Login_DT", "Logout_DT",
-            "Event_DT", "Duration (mins)", "Activity"])    
+    st.title("📝 User Activity Logs")    
+    if "user_logs_df" not in st.session_state:
+        if os.path.exists(USER_LOGS_FILE):
+            df = pd.read_csv(USER_LOGS_FILE)
+            
+            df = df.drop(columns=["S.N."], errors="ignore")
+        else:
+            df = pd.DataFrame(columns=[
+                "NGO", "District", "Username",
+                "Login at", "Logout at", "Login_DT", "Logout_DT",
+                "Event_DT", "Duration (mins)", "Activity"])    
 
-    df["Login_DT"] = pd.to_datetime(
-        df.get("Login at"),
-        format="%d-%b-%Y@%I:%M:%S%p",
-        errors="coerce"
-    )
-    df["Logout_DT"] = pd.to_datetime(
-        df.get("Logout at"),
-        format="%d-%b-%Y@%I:%M:%S%p",
-        errors="coerce"
-    )
-    df["Event_DT"] = pd.to_datetime(df.get("Event_DT"), errors="coerce")
+        df["Login_DT"] = pd.to_datetime(
+            df.get("Login at"),
+            format="%d-%b-%Y@%I:%M:%S%p",
+            errors="coerce"
+        )
+        df["Logout_DT"] = pd.to_datetime(
+            df.get("Logout at"),
+            format="%d-%b-%Y@%I:%M:%S%p",
+            errors="coerce"
+        )
+        df["Event_DT"] = pd.to_datetime(df.get("Event_DT"), errors="coerce")
 
-    #st.session_state.user_logs_df = df    
-    #df = st.session_state.user_logs_df.copy()  
-    df = df.copy()
-    df["Login_DT"] = pd.to_datetime(
-        df["Login at"],
-        format="%d-%b-%Y@%I:%M:%S%p",
-        errors="coerce"
-    ).dt.tz_localize("Asia/Kolkata")
-
-    df["Logout_DT"] = pd.to_datetime(
-        df["Logout at"],
-        format="%d-%b-%Y@%I:%M:%S%p",
-        errors="coerce"
-    ).dt.tz_localize("Asia/Kolkata")
-
-    df["Event_DT"] = pd.to_datetime(
-        df["Event_DT"],
-        errors="coerce"
-    ).dt.tz_localize("Asia/Kolkata")
-                        
-    # Apply UTC+5:30 offset for Azure deployment
-    # time_delta = pd.Timedelta(hours=5, minutes=30)
-    # df["Login_DT"] = pd.to_datetime(df["Login_DT"], errors="coerce") + time_delta
-    # df["Logout_DT"] = pd.to_datetime(df["Logout_DT"], errors="coerce") + time_delta
-    # df["Event_DT"] = pd.to_datetime(df["Event_DT"], errors="coerce") + time_delta
+        st.session_state.user_logs_df = df    
+    df = st.session_state.user_logs_df.copy()  
+    #df = df.copy()
+    time_delta = pd.Timedelta(hours=5, minutes=30)
+    df["Login_DT"] = pd.to_datetime(df["Login_DT"], errors="coerce") + time_delta
+    df["Logout_DT"] = pd.to_datetime(df["Logout_DT"], errors="coerce") + time_delta
+    df["Event_DT"] = pd.to_datetime(df["Event_DT"], errors="coerce") + time_delta
     #df["Event_Date"] = df["Event_DT"].dt.date
     # Filters
     col1, col2, col3, col4, col5, col6 = st.columns([0.8,0.8,0.8,0.5,0.5,0.5])
@@ -2776,21 +2755,16 @@ elif page == "User Activity":
 
     logs_df = df.copy()
     # Convert date inputs to datetime at midnight for safe comparison
-    #start_dt = pd.to_datetime(start_date)
-    #end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
-    start_dt = pd.Timestamp(start_date, tz="Asia/Kolkata")
-    end_dt = (
-        pd.Timestamp(end_date, tz="Asia/Kolkata")
-        + pd.Timedelta(days=1)
-        - pd.Timedelta(seconds=1)
-    )
+    start_dt = pd.to_datetime(start_date)
+    end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+    
     if "Event_DT" not in df.columns:
         df["Event_DT"] = pd.NaT
 
     df.loc[df["Event_DT"].isna() & df["Login_DT"].notna(), "Event_DT"] = df["Login_DT"]
     df.loc[df["Event_DT"].isna() & df["Logout_DT"].notna(), "Event_DT"] = df["Logout_DT"]
     
-    #df["Event_DT"] = pd.to_datetime(df["Event_DT"], errors="coerce")
+    df["Event_DT"] = pd.to_datetime(df["Event_DT"], errors="coerce")
     
     # logs_df = df[
     #     df["Event_DT"].notna() &
@@ -2817,8 +2791,8 @@ elif page == "User Activity":
         ((logs_df["Event_DT"].notna() & (logs_df["Event_DT"] >= start_dt) & (logs_df["Event_DT"] <= end_dt)) |
         (logs_df["Event_DT"].isna()))
     ]
-    #logs_df["Login_DT"] = pd.to_datetime(logs_df["Login_DT"], errors="coerce")
-    #logs_df["Logout_DT"] = pd.to_datetime(logs_df["Logout_DT"], errors="coerce")
+    logs_df["Login_DT"] = pd.to_datetime(logs_df["Login_DT"], errors="coerce")
+    logs_df["Logout_DT"] = pd.to_datetime(logs_df["Logout_DT"], errors="coerce")
 
     mask = logs_df["Activity"] == "Login"
 
@@ -2898,7 +2872,7 @@ elif page == "User Activity":
     else:
         st.info("No user activity records found for the selected filters.")
     
-    #csv_df = pd.read_csv(USER_LOGS_FILE)
+    csv_df = pd.read_csv(USER_LOGS_FILE)
     
 #------------------------------------------------------
 #Entitlements page
@@ -3648,6 +3622,5 @@ elif selected == "Manage Users" and st.session_state.get("role") == "admin" and 
         )
         edited_df.to_excel(USER_FILE, index=False)
         st.success("Changes saved successfully!")
-
 
 
