@@ -2751,7 +2751,7 @@ elif page == "User Activity":
     with col5:
         start_date = st.date_input("Start Date", datetime.today() - timedelta(days=30))
     with col6:
-        end_date = st.date_input("End Date", datetime.today())
+        end_date = st.date_input("End Date", datetime.today() + timedelta(days=1))
 
     logs_df = df.copy()
     # Convert date inputs to datetime at midnight for safe comparison
