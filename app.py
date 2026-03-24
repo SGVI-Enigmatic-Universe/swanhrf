@@ -292,10 +292,11 @@ header[data-testid="stHeader"]::after {{
     top: 0;
     left: 50%;
     right: 0;
-    transform: translateX(0%);
+    transform: translateX(-50%);
     height: 70px;
     display: flex;
     align-items: center;
+    justify-content: center;
     padding-left: 20px;
     background: rgba(249, 247, 250, 1);
     z-index: 999999;
@@ -866,18 +867,43 @@ if st.session_state.get("role") == "admin":
 if role == "admin" and UserID == "hrfadmin" :
     options.append("Manage Users")
     icons.append("people")
-    
-with st.sidebar:
+with st.sidebar:                
+    col1, col2, col3 = st.columns([1, 1, 0.8])
+    with col3:
+        if st.button("↻"):
+            log_user_activity(
+                st.session_state.user,
+                st.session_state.ngo_name,
+                st.session_state.district,
+                "Refreshed Users"
+            )
+        # Clear all session state keys
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            # Clear Streamlit caches
+            st.cache_data.clear()
+            st.cache_resource.clear()
+            # Clear users_df if stored in session
+            if "users_df" in st.session_state:
+                del st.session_state["users_df"]
+            # Set a flag to indicate full reset
+            st.session_state.reset_done = True
+            # Rerun the app
+            st.rerun()    
+   
     st.markdown("""
     <div style="
         color:#6a0dad;
         font-size:20px;
         font-weight:800;
-        padding: 0px 0px 0px 55px;
+        top: 50px;
+        left: 55px;
+        transform: translate(55px, -50px);
     ">
         ⚲ Menu
     </div>
     """, unsafe_allow_html=True)
+    
     selected = option_menu(
         menu_title=None,
         options=options,
@@ -1240,42 +1266,43 @@ if page == "Overview":
 # SUBMISSIONS PAGE
 # =====================
 elif page == "Submissions":
-    st.markdown(f"""
-    <style>
-    .logo {{
-    position: fixed;
-    top: -60px;
-    width: 30px;
-    opacity: 0.5;
-    pointer-events: none;
-    z-index: 9999;
-    animation: fall linear infinite;
-    }}
+    if not st.session_state.get("authenticated", False):
+        st.markdown(f"""
+        <style>
+        .logo {{
+        position: fixed;
+        top: -60px;
+        width: 30px;
+        opacity: 0.5;
+        pointer-events: none;
+        z-index: 9999;
+        animation: fall linear infinite;
+        }}
 
-    @keyframes fall {{
-    0% {{
-        transform: translateY(-60px) translateX(45px) rotate(-45deg);
-        opacity: 1;
-    }}
-    100% {{
-        transform: translateY(110vh) translateX(120px) rotate(120deg);
-        opacity: 0;
-    }}
-    }}
-    </style>
+        @keyframes fall {{
+        0% {{
+            transform: translateY(-60px) translateX(45px) rotate(-45deg);
+            opacity: 1;
+        }}
+        100% {{
+            transform: translateY(110vh) translateX(120px) rotate(120deg);
+            opacity: 0;
+        }}
+        }}
+        </style>
 
-    <!-- MANY logos with different positions + timing -->
-    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:5%; animation-duration:6s; animation-delay:0s;">
-    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:15%; animation-duration:8s; animation-delay:2s;">
-    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:25%; animation-duration:7s; animation-delay:1s;">
-    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:35%; animation-duration:9s; animation-delay:3s;">
-    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:45%; animation-duration:6.5s; animation-delay:1.5s;">
-    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:55%; animation-duration:8.5s; animation-delay:2.5s;">
-    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:65%; animation-duration:7.5s; animation-delay:0.5s;">
-    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:75%; animation-duration:9.5s; animation-delay:3.5s;">
-    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:85%; animation-duration:6.8s; animation-delay:1.2s;">
-    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:95%; animation-duration:8.2s; animation-delay:2.2s;">
-    """, unsafe_allow_html=True)
+        <!-- MANY logos with different positions + timing -->
+        <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:5%; animation-duration:6s; animation-delay:0s;">
+        <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:15%; animation-duration:8s; animation-delay:2s;">
+        <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:25%; animation-duration:7s; animation-delay:1s;">
+        <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:35%; animation-duration:9s; animation-delay:3s;">
+        <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:45%; animation-duration:6.5s; animation-delay:1.5s;">
+        <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:55%; animation-duration:8.5s; animation-delay:2.5s;">
+        <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:65%; animation-duration:7.5s; animation-delay:0.5s;">
+        <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:75%; animation-duration:9.5s; animation-delay:3.5s;">
+        <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:85%; animation-duration:6.8s; animation-delay:1.2s;">
+        <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:95%; animation-duration:8.2s; animation-delay:2.2s;">
+        """, unsafe_allow_html=True)
     
     if "login_ready" not in st.session_state:
         placeholder = st.empty()
@@ -3710,26 +3737,4 @@ elif selected == "Manage Users" and st.session_state.get("role") == "admin" and 
         edited_df.to_excel(USER_FILE, index=False)
         st.success("Changes saved successfully!")
 
-with st.sidebar:                
-    col1, col2, col3 = st.columns([0.8, 1, 0.8])
-    with col2:
-        if st.button("↻"):
-            log_user_activity(
-                st.session_state.user,
-                st.session_state.ngo_name,
-                st.session_state.district,
-                "Refreshed Users"
-            )
-        # Clear all session state keys
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            # Clear Streamlit caches
-            st.cache_data.clear()
-            st.cache_resource.clear()
-            # Clear users_df if stored in session
-            if "users_df" in st.session_state:
-                del st.session_state["users_df"]
-            # Set a flag to indicate full reset
-            st.session_state.reset_done = True
-            # Rerun the app
-            st.rerun()
+
