@@ -290,9 +290,9 @@ header[data-testid="stHeader"]::after {{
 .custom-header {{
     position: fixed;
     top: 0;
-    left: 55%;
+    left: 50%;
     right: 0;
-    transform: translateX(-50%);
+    transform: translateX(0%);
     height: 70px;
     display: flex;
     align-items: center;
@@ -340,6 +340,7 @@ header[data-testid="stHeader"]::after {{
 </div>
 """
 st.markdown(header_html, unsafe_allow_html=True)
+
 st.markdown(
     """
     <style>
@@ -739,8 +740,8 @@ if st.session_state.get("authenticated"):
     #     for k in ["authenticated", "user", "role", "ngo", "district", "ngo_name", "selected_page", "login_logged"]:
     #         st.session_state.pop(k, None)
     #     st.rerun()
-    col1, col2 = st.sidebar.columns([1,1.5])  # Adjust width ratio as needed
-    with col1:
+    col1, col2, col3 = st.sidebar.columns([0.3,1.5,1.5])  # Adjust width ratio as needed
+    with col3:
         if st.button("🚪Logout", key="global_logout"):
             logout_user(st.session_state.user)
             for k in ["authenticated", "user", "role", "ngo", "district", "ngo_name", "selected_page", "login_logged"]:
@@ -867,11 +868,22 @@ if role == "admin" and UserID == "hrfadmin" :
     icons.append("people")
     
 with st.sidebar:
+    st.markdown("""
+    <div style="
+        color:#6a0dad;
+        font-size:20px;
+        font-weight:800;
+        padding: 0px 0px 0px 55px;
+    ">
+        ⚲ Menu
+    </div>
+    """, unsafe_allow_html=True)
     selected = option_menu(
-        menu_title="Menu 🔎",
+        menu_title=None,
         options=options,
         icons=icons,
-        menu_icon="cast",
+        #orientation="horizontal",
+        #menu_icon="cast",
         default_index=0,
         styles={
             "container": {
@@ -903,6 +915,13 @@ with st.sidebar:
             }
         }
     )
+    st.markdown("""
+    <style>
+    section[data-testid="stSidebar"] div h2 {
+        color: #6a0dad !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 st.session_state["selected_page"] = selected
 page = selected
 
@@ -1011,10 +1030,44 @@ if page == "Overview":
             #total_value = int(total.values[0]) if len(total) else 0
             features.append({'feature_id': idx,'District': district_name,'Total Submissions': int(total.iloc[0]) if len(total) else 0})
         return geojson, pd.DataFrame(features)
+    df['District_EN'] = df[DISTRICT_COL].map(DISTRICT_MAP).fillna(df[DISTRICT_COL])
     geojson_data, map_df_full = load_map_assets(df)
     
+    df['end'] = pd.to_datetime(df['end'])
+    df['month'] = df['end'].dt.to_period('M').astype(str)
+    # Get full month range
+    all_months = pd.period_range(df['end'].min(), df['end'].max(), freq='M').astype(str)
+    # Get all districts
+    all_districts = map_df_full['District'].unique()
+
+    # Create full grid
+    full_index = pd.MultiIndex.from_product(
+        [all_districts, all_months],
+        names=['District_EN', 'month']
+    )
+    monthly = (
+        df.groupby(['District_EN', 'month'])
+        .size()
+        .reindex(full_index, fill_value=0)   # 👈 fill missing with 0
+        .reset_index(name='count')
+    )
+    monthly['month_dt'] = pd.to_datetime(monthly['month'])
+    monthly = monthly.sort_values(['District_EN', 'month_dt'])
+    monthly['Total Survey'] = monthly.groupby('District_EN')['count'].cumsum()
+    
+    
+    animated_df = monthly.merge(
+        map_df_full[['District', 'feature_id']],
+        left_on='District_EN',
+        right_on='District',
+        how='left'
+    )
+    animated_df = animated_df.sort_values("month")
+    animated_df = animated_df.sort_values("month_dt")
+    animated_df['Month'] = animated_df['month_dt'].dt.strftime('%b %Y')
+    
     @st.cache_data(show_spinner=False, persist="disk")
-    def prepare_map_df(map_df_full, geojson_data):
+    def prepare_map_df(animated_df, geojson_data):
     # --- Choropleth 
         custom_scale = [
             [0, "#ffffff"], # start from white
@@ -1022,19 +1075,22 @@ if page == "Overview":
                # middle light purple (adjust as you like)
             [1, "#6a0dad"]       # dark purple at the max
         ]
-
+        range_color = (0, animated_df['Total Survey'].max())
         fig = px.choropleth_mapbox(
-            map_df_full,
+            animated_df,
             geojson=geojson_data,
             locations="feature_id",
-            color="Total Submissions",
+            color="Total Survey",
+            animation_frame="Month",
             color_continuous_scale=custom_scale,
-            hover_data={'District': True, 'Total Submissions': True, 'feature_id': False},
+            hover_data={'District': True, 'Total Survey': True, 'feature_id': False,'Month': False, },
             mapbox_style="carto-positron",
             center={"lat": 10.9, "lon": 78.8},
             zoom=6,
-            labels={'Total Submissions': 'Submissions'}
+            #labels={'Total Submissions': 'Submissions'}
         )
+        fig.layout.updatemenus[0].buttons[0].args[1]['frame']['duration'] = 600
+        fig.layout.updatemenus[0].buttons[0].args[1]['transition']['duration'] = 400
         
         fig.update_layout(
             mapbox={
@@ -1042,16 +1098,29 @@ if page == "Overview":
                 'domain': {'x': [0.0, 1.0],'y': [0.0, 1.0]}},
             paper_bgcolor='rgba(0,0,0,0)',
             margin={"r":0,"t":0,"l":0,"b":0},
-            height=550,
+            height=580,
             autosize=True, font=dict(color="black"),
+            sliders=[{
+                    "pad": {"t": -25,"l": -105},   
+                    "x": 0.16, "y": 0.0}],
+            updatemenus=[{
+                "x": 0.11, "y": 0.25}],
             coloraxis_colorbar=dict(
-                x=0.85,y=0.55,xanchor='left',len=0.5,thickness=10,
+                x=0.85,y=0.45,xanchor='left',len=0.5,thickness=10,
                 tickfont=dict(color="black", size=12),   # ⭐ ticks
-                title=dict(text="Submissions", font=dict(color="black")),          # ⭐ title
+                title=dict(text="Total Survey", font=dict(color="black")),          # ⭐ title
                 outlinecolor="black", outlinewidth=0.7
             ))
+        fig.layout.sliders[0]["currentvalue"] = {
+            "prefix": "   ",
+            "font": {"size": 11, "color": "#6a0dad"}
+        }
+        fig.update_traces(
+            marker_line_color="black",
+            marker_line_width=0.5,
+        )
         return fig
-    fig = prepare_map_df(map_df_full,geojson_data)
+    fig = prepare_map_df(animated_df,geojson_data)
     #st.session_state.map_render_id = st.session_state.get("map_render_id", 0) + 1
     # with col2:
     # col1,col2,col3 = st.columns([0.3, 2, 0.5])
@@ -1171,6 +1240,43 @@ if page == "Overview":
 # SUBMISSIONS PAGE
 # =====================
 elif page == "Submissions":
+    st.markdown(f"""
+    <style>
+    .logo {{
+    position: fixed;
+    top: -60px;
+    width: 30px;
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 9999;
+    animation: fall linear infinite;
+    }}
+
+    @keyframes fall {{
+    0% {{
+        transform: translateY(-60px) translateX(45px) rotate(-45deg);
+        opacity: 1;
+    }}
+    100% {{
+        transform: translateY(110vh) translateX(120px) rotate(120deg);
+        opacity: 0;
+    }}
+    }}
+    </style>
+
+    <!-- MANY logos with different positions + timing -->
+    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:5%; animation-duration:6s; animation-delay:0s;">
+    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:15%; animation-duration:8s; animation-delay:2s;">
+    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:25%; animation-duration:7s; animation-delay:1s;">
+    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:35%; animation-duration:9s; animation-delay:3s;">
+    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:45%; animation-duration:6.5s; animation-delay:1.5s;">
+    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:55%; animation-duration:8.5s; animation-delay:2.5s;">
+    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:65%; animation-duration:7.5s; animation-delay:0.5s;">
+    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:75%; animation-duration:9.5s; animation-delay:3.5s;">
+    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:85%; animation-duration:6.8s; animation-delay:1.2s;">
+    <img src="data:image/png;base64,{logo_base64}" class="logo" style="left:95%; animation-duration:8.2s; animation-delay:2.2s;">
+    """, unsafe_allow_html=True)
+    
     if "login_ready" not in st.session_state:
         placeholder = st.empty()
         with placeholder.container():
@@ -1178,7 +1284,7 @@ elif page == "Submissions":
                 time.sleep(0.8)
         st.session_state.login_ready = True
         st.rerun()
-
+        
     if not st.session_state.authenticated:
         placeholder = st.empty()
         with placeholder.container():
@@ -2285,7 +2391,7 @@ elif page == "Dashboard":
                             xref="paper",
                             yref="paper",
                             showarrow=False,
-                            font=dict(size=12, color="black")
+                            font=dict(size=11.4, color="black")
                         )
                         st.plotly_chart(fig_emp_types, use_container_width=True)
                     
@@ -2294,6 +2400,7 @@ elif page == "Dashboard":
                     #     "<div style='text-align:center; margin-bottom:-100px; font-size:12px;font-weight:600;'>Welfare Board Registration </div>",
                     #     unsafe_allow_html=True
                     # )
+                    #st.markdown("<div style='margin-top: 0px;'></div>", unsafe_allow_html=True)
                     welfare_counts = (
                         dash_df[WELFARE_COL]
                         .value_counts()
@@ -2310,7 +2417,7 @@ elif page == "Dashboard":
                         showlegend=False,
                         paper_bgcolor="rgba(0,0,0,0)",
                         plot_bgcolor="rgba(0,0,0,0)",
-                        height=150, margin=dict(t=15, b=18, l=20, r=0)
+                        height=155, margin=dict(t=15, b=20, l=14, r=0)
                     )
 
                     fig_welfare.update_traces(
@@ -2324,7 +2431,7 @@ elif page == "Dashboard":
                         xref="paper",
                         yref="paper",
                         showarrow=False,
-                        font=dict(size=12, color="black")
+                        font=dict(size=11.35, color="black")
                     )
                     st.plotly_chart(fig_welfare, use_container_width=True)
                     
@@ -2381,7 +2488,7 @@ elif page == "Dashboard":
                             xref="paper",
                             yref="paper",
                             showarrow=False,
-                            font=dict(size=12, color="black")
+                            font=dict(size=11.5, color="black")
                         )
                         st.plotly_chart(fig_welfare_types, use_container_width=True)
 
@@ -2751,7 +2858,7 @@ elif page == "User Activity":
     with col5:
         start_date = st.date_input("Start Date", datetime.today() - timedelta(days=30))
     with col6:
-        end_date = st.date_input("End Date", datetime.today() + timedelta(days=1))
+        end_date = st.date_input("End Date", datetime.today())
 
     logs_df = df.copy()
     # Convert date inputs to datetime at midnight for safe comparison
@@ -3577,27 +3684,7 @@ elif selected == "Add New Users" and st.session_state.get("role") == "admin":
                 fix_unhashed_passwords(USER_FILE)
                 df_new = pd.read_excel(USER_FILE)
                 st.success(f"User {userid} created successfully with serial {next_serial}!")
-                
-        if st.button("💥Refresh app and user data!"):
-            log_user_activity(
-                st.session_state.user,
-                st.session_state.ngo_name,
-                st.session_state.district,
-                "Refreshed Users"
-            )
-        # Clear all session state keys
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            # Clear Streamlit caches
-            st.cache_data.clear()
-            st.cache_resource.clear()
-            # Clear users_df if stored in session
-            if "users_df" in st.session_state:
-                del st.session_state["users_df"]
-            # Set a flag to indicate full reset
-            st.session_state.reset_done = True
-            # Rerun the app
-            st.rerun()
+
         #st.write("DEBUG:", st.session_state.get("user"), st.session_state.get("role"), st.session_state.get("district"))
                      
 elif selected == "Manage Users" and st.session_state.get("role") == "admin" and st.session_state.get("user") == "hrfadmin":
@@ -3623,4 +3710,26 @@ elif selected == "Manage Users" and st.session_state.get("role") == "admin" and 
         edited_df.to_excel(USER_FILE, index=False)
         st.success("Changes saved successfully!")
 
-
+with st.sidebar:                
+    col1, col2, col3 = st.columns([0.8, 1, 0.8])
+    with col2:
+        if st.button("↻ Refresh"):
+            log_user_activity(
+                st.session_state.user,
+                st.session_state.ngo_name,
+                st.session_state.district,
+                "Refreshed Users"
+            )
+        # Clear all session state keys
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            # Clear Streamlit caches
+            st.cache_data.clear()
+            st.cache_resource.clear()
+            # Clear users_df if stored in session
+            if "users_df" in st.session_state:
+                del st.session_state["users_df"]
+            # Set a flag to indicate full reset
+            st.session_state.reset_done = True
+            # Rerun the app
+            st.rerun()
