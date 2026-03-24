@@ -3713,7 +3713,7 @@ elif selected == "Manage Users" and st.session_state.get("role") == "admin" and 
 with st.sidebar:                
     col1, col2, col3 = st.columns([0.8, 1, 0.8])
     with col2:
-        if st.button("↻ Refresh"):
+        if st.button("↻"):
             log_user_activity(
                 st.session_state.user,
                 st.session_state.ngo_name,
