@@ -4,11 +4,8 @@ numpy
 plotly
 bcrypt==4.1.0
 cffi>=1.15.1
-Requests
+requests
 openpyxl
 streamlit_option_menu
 geopandas
-Flask
-
-
-
+flask
