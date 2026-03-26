@@ -6,6 +6,7 @@ bcrypt==4.1.0
 cffi>=1.15.1
 requests
 openpyxl
+xlsxwriter
 streamlit_option_menu
 geopandas
 flask
