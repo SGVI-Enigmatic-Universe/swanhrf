@@ -1150,10 +1150,18 @@ if page == "Overview":
                 "x": 0.11, "y": 0.25}],
             coloraxis_colorbar=dict(
                 x=0.85,y=0.45,xanchor='left',len=0.5,thickness=10,
-                tickfont=dict(color="black", size=12),   # ⭐ ticks
+                tickfont=dict(color="black", size=11),   # ⭐ ticks
                 title=dict(text="Total Survey", font=dict(color="black")),          # ⭐ title
                 outlinecolor="black", outlinewidth=0.7
             ))
+        fig.update_coloraxes(
+            colorbar_title_font=dict(
+                size=11  # set your desired font size
+            ),
+            colorbar_tickfont=dict(
+                size=9  # optional: decrease tick font size too
+            )
+        )
         fig.layout.sliders[0]["currentvalue"] = {
             "prefix": "   ",
             "font": {"size": 11, "color": "#6a0dad"}
@@ -1880,7 +1888,7 @@ elif page == "Dashboard":
                 # ---------- SINGLE SELECT ----------
                 "13.அவர் மாற்றுத்திறனாளியா?": {
                     "type": "single",
-                    "label": "PWD"
+                    "label": "Is PWD (SW)"
                 },
                 "11.சமூகம்": {
                     "type": "single",
@@ -1901,6 +1909,10 @@ elif page == "Dashboard":
                 "60.உங்களுக்கு சட்டம் சார்ந்த உதவிகள் ஏதேனும் தேவையா?": {
                     "type": "single",
                     "label": "Legal aid required"
+                },
+                "19.உங்கள் குடும்பத்தில் மாற்றுத்திறனாளி உள்ளனரா? (உங்களை தவிர்த்து)": {
+                    "type": "single",
+                    "label": "Any PWD in family"
                 },
                 "20.உங்கள் குடும்பத்தில் மூன்றாம் பாலினத்தவர் உள்ளனரா? (உங்களை தவிர்த்து)": {
                     "type": "single",
@@ -1979,12 +1991,19 @@ elif page == "Dashboard":
                 "கடலில் மீன் பிடிக்கும் போது" : "While fishing in the sea"
             }
 
+            # selected_questions = st.multiselect(
+            #     "Select Questions for Analysis",
+            #     list(QUESTION_GROUPS.keys()),
+            #     format_func=lambda q: QUESTION_GROUPS[q]["label"]
+            # )
             selected_questions = st.multiselect(
                 "Select Questions for Analysis",
-                list(QUESTION_GROUPS.keys()),
+                sorted(
+                    QUESTION_GROUPS.keys(),
+                    key=lambda q: QUESTION_GROUPS[q]["label"].lower()  # sort alphabetically
+                ),
                 format_func=lambda q: QUESTION_GROUPS[q]["label"]
             )
-
             #selected_questions = [display_to_col[d] for d in selected_display]
             # =====================
             # APPLY QUESTION FILTERS (CORRELATION)
