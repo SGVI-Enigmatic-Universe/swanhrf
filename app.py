@@ -1411,8 +1411,9 @@ elif page == "Submissions":
     month_counts = (
             filtered_df.assign(Month=filtered_df['end'].dt.to_period('M').dt.to_timestamp())
             .groupby('Month').size().reset_index(name='Submitted'))
+    month_counts = month_counts.sort_values('Month', ascending=False).reset_index(drop=True)
     month_counts['Month'] = month_counts['Month'].dt.strftime('%b %Y')
-    month_counts = month_counts.sort_values('Month').reset_index(drop=True)
+    #month_counts = month_counts.sort_values('Month').reset_index(drop=True)
     month_counts.insert(0, "            #", range(1, len(month_counts)+1))
 # =====================
 # QUESTION FILTERS (SINGLE PASS, EXCEL ORDER)
@@ -1518,7 +1519,7 @@ elif page == "Submissions":
                 border-radius: 12px;
             ">
                 <div style="
-                    font-size: 20px;  /* same as subheader in col3 */
+                    font-size: 18px;  /* same as subheader in col3 */
                     font-weight: 600;
                     text-align: center;
                     margin-bottom: 8px;
@@ -1529,6 +1530,7 @@ elif page == "Submissions":
             """,
             unsafe_allow_html=True
         )
+        
         month_counts['Submitted'] = month_counts['Submitted'].map(lambda x: f"{x:,}")
         html_table = month_counts.to_html(index=False)
 
@@ -1564,10 +1566,28 @@ elif page == "Submissions":
         </style>
 
         {html_table}
-        """, height=250, scrolling=False)
+        """, height=160, scrolling=True)
 
     with col3:
-        st.title(" ")
+        st.markdown(
+            f"""
+            <div style="
+                background: rgba(255, 255, 255, 0); 
+                padding: 12px; 
+                border-radius: 12px;
+            ">
+                <div style="
+                    font-size: 18px;  /* same as subheader in col3 */
+                    font-weight: 600;
+                    text-align: center;
+                    margin-bottom: 8px;
+                ">
+                    தேர்ந்தெடுக்கப்பட்ட வரம்பில் உள்ள சமர்ப்பிப்புகள்
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
         filtered_range_df = filtered_df[(filtered_df['end'] >= start_dt) & (filtered_df['end'] <= end_dt)].copy()
         count_text = f"{len(filtered_range_df):,}"
         date_text = f"{selected_start.strftime('%d-%m-%Y')} → {selected_end.strftime('%d-%m-%Y')}"
@@ -1578,20 +1598,16 @@ elif page == "Submissions":
         <div style="
             text-align:center;
             background: rgba(106, 13, 173, 0.1);
-            padding:20px;
+            padding:30px;
             border-radius:14px;
             font-family:'Roboto Condensed', sans-serif;
         ">
-
-            <div style="font-size:18px; font-weight:600; margin-bottom:6px;">
-                தேர்ந்தெடுக்கப்பட்ட வரம்பில் உள்ள சமர்ப்பிப்புகள்
-            </div>
 
             <div style="font-size:14px; margin-bottom:10px; opacity:0.85;">
                 {date_text}
             </div>
 
-            <div style="font-size:36px; font-weight:700; color:#6a0dad; line-height:1;">
+            <div style="font-size:48px; font-weight:700; color:#6a0dad; line-height:1;">
                 {count_text}
             </div>
 
@@ -1604,7 +1620,8 @@ elif page == "Submissions":
 # =====================
 # DISPLAY TABLE
 # =====================
-    st.write("கணக்கெடுப்பு தரவு")
+    st.write("")
+    st.write("கணக்கெடுப்பு தரவு(கள்):")
     
     @st.cache_data(show_spinner=False)
     def get_display_df(filtered_df):
@@ -1871,6 +1888,10 @@ elif page == "Dashboard":
                 "20.உங்கள் குடும்பத்தில் மூன்றாம் பாலினத்தவர் உள்ளனரா? (உங்களை தவிர்த்து)": {
                     "type": "single",
                     "label": "Any transgender in family"
+                },
+                "48.தனித்து வாழும் பெண்கள் செயல்பாட்டு கூட்டம் (SWAN) அமைப்பில் உறுப்பினராக இணைய விருப்பமா?": {
+                    "type": "single",
+                    "label": "SWAN Membership"
                 }
             }
 
@@ -1928,6 +1949,8 @@ elif page == "Dashboard":
                 "பிற்படுத்தப்பட்ட வகுப்பினர் (BC)" : "Backward Classes (BC)",
                 "இதர பிற்படுத்தப்பட்ட வகுப்பினர் (OBC)" : "Other Backward Classes (OBC)",
                 "பொதுப் பிரிவு (General/OC)" : "General (OC)",
+                "பொதுப் பிரிவு (OC)" : "General (OC)",
+                "பொதுப் பிரிவு (General)" : "General (OC)",
                 "மீனவ சமூகம் (SC)" : "Fishing Community (SC)",
                 "மீனவ சமூகம் (ST)" : "Fishing Community (ST)",
                 "மீனவ சமூகம் (MBC)" : "Fishing Community (MBC)",
@@ -3125,13 +3148,7 @@ elif page == "Entitlements":
     reverse_map = {v: k for k, v in district_tn_to_en.items()}
     col1, col2, col3, col4, col5 = st.columns([0.5, 0.1, 1.0, 0.1, 1.0])
     with col3:
-        # district_vals_en = ["All"] + sorted(district_tn_to_en.values())
-        # if st.session_state.get("ngo_filter"):   # NGO selected
-        #     districts_with_ngo = df[df[NGO_COL].isin(st.session_state["ngo_filter"])][DISTRICT_COL].dropna().unique().tolist()
-        #     district_vals_en = ["All"] + sorted(district_tn_to_en.get(d, d) for d in districts_with_ngo)
-        # else:  # No NGO selected → show all districts
-        #     district_vals_en = ["All"] + sorted(district_tn_to_en.values()) 
-        # # sel_district = st.multiselect("Select District(s)",options=district_vals_en, key="district_filters")
+        
         if "district_filters" not in st.session_state:
             st.session_state["district_filters"] = ["All"]
 
@@ -3341,15 +3358,7 @@ elif page == "Entitlements":
                             st.session_state[key_name] = "Both"
 
                         choice = st.session_state[key_name]
-                        # Extract option name
-                        # opt_name = opt_col.replace(prefix, "")
-                        # opt_label = OPT_TAM_ENG.get(opt_name, opt_name)
-                        # choice = st.radio(
-                        #     opt_label,
-                        #     ["Both", "Yes", "No"],
-                        #     horizontal=True,
-                        #     key=f"dash_{opt_col}"
-                        # )
+                      
 
                         if choice == "Yes":
                             dash_df = dash_df[dash_df[opt_col] == 1]
@@ -3373,81 +3382,8 @@ elif page == "Entitlements":
                     if key_name not in st.session_state:
                         st.session_state[key_name] = list(display_map.keys())
 
-                    selected_display = st.session_state[key_name]
-                    # with st.expander(q_label):
-                    #     selected_display = st.multiselect(
-                    #         q_label,
-                    #         list(display_map.keys()),
-                    #         key=f"dash_{col}")
-                    if not selected_display:
-                        selected_display = list(display_map.keys())
-
-                    selected_actual = [display_map[d] for d in selected_display]
-
-                    dash_df = dash_df[dash_df[col].isin(selected_actual)]
-                    
-        # with col1:
-        #     st.write("")
-        #     st.markdown(
-        #         f"""
-        #         <div style="
-        #             background:#6a0dad;
-        #             color:white;
-        #             padding:7px;
-        #             border-radius:12px;
-        #             text-align:center;
-        #             font-weight:700;
-        #             margin-bottom:12px;
-        #         ">
-        #             <div style="font-size:15px;margin-top:0px;">Records</div>
-        #             <div style="font-size:25px;margin-top:-10px;">{len(dash_df):,}</div>
-        #         </div>
-        #         """,
-        #         unsafe_allow_html=True
-        #     )
-
-        #     # NGO Count
-        #     st.markdown(
-        #         f"""
-        #         <div style="
-        #             background:#6a0dad;
-        #             color:white;
-        #             padding:7px;
-        #             border-radius:12px;
-        #             text-align:center;
-        #             font-weight:700;
-        #             margin-bottom:12px;
-        #         ">
-        #             <div style="font-size:15px; margin-top:0px; margin-bottom:-5px;">NGOs</div>
-        #             <div style="font-size:25px; margin-top:-10px;">
-        #                 {dash_df[NGO_COL].nunique(dropna=True)}
-        #             </div>
-        #         </div>
-        #         """,
-        #         unsafe_allow_html=True
-        #     )
-
-        #     # District Count
-        #     st.markdown(
-        #         f"""
-        #         <div style="
-        #             background:#6a0dad;
-        #             color:white;
-        #             padding:7px;
-        #             border-radius:12px;
-        #             text-align:center;
-        #             font-weight:700;
-        #         ">
-        #             <div style="font-size:15px; margin-top:0px;">Districts</div>
-        #             <div style="font-size:25px; margin-top:-10px;">
-        #                 {dash_df[DISTRICT_COL].nunique(dropna=True)}
-        #             </div>
-        #         </div>
-        #         """,
-        #         unsafe_allow_html=True
-        #     )
-            #st.write("")
-            #st.write("")
+                    dash_df = dash_df.copy()
+        
         # =====================
         # DASHBOARD LAYOUT (3 x 2)
         # =====================
@@ -4220,6 +4156,7 @@ elif page == "Entitlements":
         total_applied,
         total_received
     ]
+    st.markdown("<div style='text-align:center; margin-top:20px; margin-bottom:20px;'><h2 style='font-size:25px; color:#6a0dad'>Entitlements Summary</h2></div>", unsafe_allow_html=True)
     col1, col2 = st.columns([1.5, 1])
     with col1:
         table_df = pd.DataFrame(table_df.values, columns=table_df.columns)
@@ -4358,7 +4295,7 @@ elif page == "Entitlements":
             height=350
         )
         #st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})  
-    st.markdown("<div style='text-align:center; margin-top:0px; margin-bottom:0px;'><h2 style='font-size:20px; color:#6a0dad'>Entitlements Summary</h2></div>", unsafe_allow_html=True)
+    #st.markdown("<div style='text-align:center; margin-top:0px; margin-bottom:0px;'><h2 style='font-size:20px; color:#6a0dad'>Entitlements Summary</h2></div>", unsafe_allow_html=True)
     
     #filter_col1, filter_col2, filter_col3 = st.columns([1, 1.5, 0.4])
     #with filter_col1:
@@ -4596,7 +4533,7 @@ elif page == "Entitlements":
             height=table_height,
             scrolling=True
         )
-    st.markdown("<div style='text-align:center; margin-top:-50px; margin-bottom:20px;'><h2 style='font-size:20px; color:#6a0dad'>Entitlements Overall Glance</h2></div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center; margin-top:0px; margin-bottom:20px;'><h2 style='font-size:20px; color:#6a0dad'>Entitlements Overall Glance</h2></div>", unsafe_allow_html=True)
     chart_col1, chart_col2= st.columns([1.5,1])
     with chart_col1:
         #filtered_df["Category"] = filtered_df["Category"].fillna("Unknown")
@@ -4694,7 +4631,7 @@ elif page == "Entitlements":
             # rotation to visually center smaller slice
             rotation_angle = (360 * smaller / total) / 2
             # optional: cap at 25 deg max for very small slices
-            rotation_angle = min(rotation_angle, 25)
+            rotation_angle = min(rotation_angle, 90)
     
         # Show counts inside slices, hide hover
         fig_donut.update_traces(
@@ -4789,55 +4726,82 @@ elif selected == "Add New Users" and st.session_state.get("role") == "admin":
             print("✅ Unhashed passwords fixed")
 
     role = st.selectbox("Select Role", ["user", "admin"])
-    district = st.selectbox("Select District", list(district_codes.keys()))
-    ngo_name = st.text_input("NGO Name")
+    if role == "admin":
+        district = "All"
+        st.text_input("District", value=district, disabled=True)  # just show it
+    else:
+        district = st.selectbox("Select District", list(district_codes.keys()))
     
-    if district:
-        dcode = district_codes[district]
-        auto_userid = get_next_userid(district, dcode)
-        auto_password = f"{auto_userid.capitalize()}@swan"
+    auto_userid = "-----hrf"
+    # if role == "admin":
+    #     ngo_name_value = f"{auto_userid.split('hrf')[0].capitalize()} HRF" if "hrf" in userid.lower() else userid.capitalize()
+    #     ngo_name = st.text_input("NGO Name", value=ngo_name_value, disabled=True)  # admin cannot edit
+    
+    # else:
+    #     ngo_name = st.text_input("NGO Name")  # editable for users
+    
+    if role == "admin":
+        auto_userid = "-----hrf"
+    else:    
+        if district:
+            dcode = district_codes[district]
+            auto_userid = get_next_userid(district, dcode)
+            #auto_password = f"{auto_userid.capitalize()}@swan"
         
-        st.markdown("<div style='text-align:center; margin-top:0px; margin-bottom:0px;'><h2 style='font-size:20px; color:#6a0dad'>🔹Suggestion (Editable)</h2></div>", unsafe_allow_html=True)
-        
-        userid = st.text_input("UserID", value=auto_userid)
-        password = st.text_input("Password", value=auto_password)
-        active = st.selectbox("Active Status", [1, 0])
+    ngo_name_placeholder = st.empty()    
+    st.markdown("<div style='text-align:center; margin-top:0px; margin-bottom:0px;'><h2 style='font-size:20px; color:#6a0dad'>🔹Suggestion (Editable)</h2></div>", unsafe_allow_html=True)
+    userid = st.text_input("UserID", value=auto_userid)
+    if role == "admin":
+        ngo_name_value = f"{userid.split('hrf')[0].capitalize()} HRF" if "hrf" in userid.lower() else userid.capitalize()
+        ngo_name_placeholder.text_input("NGO Name", value=ngo_name_value, disabled=True)
+    else:
+        ngo_name_placeholder.text_input("NGO Name")  # editable for users
+    def generate_password(userid, role):
+        userid = userid.lower()
+        if role == "admin" and "hrf" in userid:
+            prefix = userid.split("hrf")[0]
+            return f"{prefix.capitalize()}@hrfswan"
+        elif role == "user":
+            return f"{userid.capitalize()}@swan"
 
-        if st.button("Create User"):
-            log_user_activity(
-                st.session_state.user,
-                st.session_state.ngo_name,
-                st.session_state.district,
-                "Added User(s)"
-            )
-            df = pd.read_excel(USER_FILE)
+    password = st.text_input("Password", value=generate_password(userid, role))
+    active = st.selectbox("Active Status", [1, 0])
 
-            if userid in df["UserID"].values:
-                st.error("UserID already exists!")
-            else:
-                #hashed_pw = hash_password(password)
-                #hashed_pw = str(hashed_pw).replace("\n", "").replace("\r", "").strip()
-                # --- Auto serial number ---
-                serials = pd.to_numeric(df["#"], errors="coerce").fillna(0)
-                next_serial = int(serials.max()) + 1 if not serials.empty else 1
-                
-                new_row = {
-                    "#": next_serial,
-                    "Role": role,
-                    "District": district,
-                    "NGO": ngo_name,
-                    "UserID": userid,
-                    "Password": password,
-                    "Active": active
-                }
-                
-                df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-                columns_in_order = ["#", "Role", "District", "NGO", "UserID", "Password", "Active"]
-                df = df[columns_in_order]
-                df.to_excel(USER_FILE, index=False)
-                fix_unhashed_passwords(USER_FILE)
-                df_new = pd.read_excel(USER_FILE)
-                st.success(f"User {userid} created successfully with serial {next_serial}!")
+    if st.button("Create User"):
+        log_user_activity(
+            st.session_state.user,
+            st.session_state.ngo_name,
+            st.session_state.district,
+            "Added User(s)"
+        )
+        df = pd.read_excel(USER_FILE)
+
+        if userid in df["UserID"].values:
+            st.error("UserID already exists!")
+        else:
+            #hashed_pw = hash_password(password)
+            #hashed_pw = str(hashed_pw).replace("\n", "").replace("\r", "").strip()
+            # --- Auto serial number ---
+            serials = pd.to_numeric(df["#"], errors="coerce").fillna(0)
+            next_serial = int(serials.max()) + 1 if not serials.empty else 1
+            
+            new_row = {
+                "#": next_serial,
+                "Role": role,
+                "District": district,
+                "NGO": ngo_name,
+                "UserID": userid,
+                "Password": password,
+                "Active": active
+            }
+            
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+            columns_in_order = ["#", "Role", "District", "NGO", "UserID", "Password", "Active"]
+            df = df[columns_in_order]
+            df.to_excel(USER_FILE, index=False)
+            fix_unhashed_passwords(USER_FILE)
+            df_new = pd.read_excel(USER_FILE)
+            st.success(f"User {userid} created successfully with serial {next_serial}!")
 
         #st.write("DEBUG:", st.session_state.get("user"), st.session_state.get("role"), st.session_state.get("district"))
                      
