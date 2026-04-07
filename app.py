@@ -85,6 +85,23 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+st.markdown(
+    """
+    <style>
+    /* Force sidebar to be in front of everything */
+    [data-testid="stSidebar"] {
+        z-index: 9999999 !important; /* higher than your header */
+        position: fixed; /* ensures it stays fixed */
+    }
+
+    /* Optional: keep header content below */
+    header.css-1v0mbdj {  /* adjust based on your header class */
+        z-index: 1 !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 st.markdown("""
 <style>
 
@@ -290,8 +307,8 @@ header[data-testid="stHeader"]::after {{
 .custom-header {{
     position: fixed;
     top: 0;
-    left: 50%;
-    right: 0;
+    left: 35%;
+    right: 0%;
     transform: translateX(-50%);
     height: 70px;
     display: flex;
@@ -2161,9 +2178,17 @@ elif page == "Dashboard":
                     color_continuous_scale=custom_scale,
                     hover_data={'District': True, 'Count': True, 'feature_id': False},
                     mapbox_style="carto-positron",
-                    center={"lat": 10, "lon": 80},
+                    center={"lat": 10, "lon": 79.75},
                     zoom=5.5,
-                    labels={'Count': 'Submissions'}
+                    labels={'Count': 'Total'}
+                )
+                fig.update_coloraxes(
+                    colorbar_title_font=dict(
+                        size=12  # set your desired font size
+                    ),
+                    colorbar_tickfont=dict(
+                        size=10  # optional: decrease tick font size too
+                    )
                 )
                 fig.update_layout(
                     mapbox={
@@ -3034,7 +3059,7 @@ elif page == "User Activity":
 elif page == "Entitlements":
     
     st.markdown(
-        "<div style='text-align:center; margin-top:-100px; '><h2 style='font-size:30px; color:#6a0dad'>Entitlements Status</h2></div>",
+        "<div style='text-align:center; margin-top:-100px; '><h2 style='font-size:30px; color:#6a0dad'>Entitlements Status (from survey)</h2></div>",
         unsafe_allow_html=True
     )
     st.markdown("""
@@ -4156,7 +4181,7 @@ elif page == "Entitlements":
         total_applied,
         total_received
     ]
-    st.markdown("<div style='text-align:center; margin-top:20px; margin-bottom:20px;'><h2 style='font-size:25px; color:#6a0dad'>Entitlements Summary</h2></div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center; margin-top:20px; margin-bottom:20px;'><h2 style='font-size:25px; color:#6a0dad'>Entitlements Summary (through support)</h2></div>", unsafe_allow_html=True)
     col1, col2 = st.columns([1.5, 1])
     with col1:
         table_df = pd.DataFrame(table_df.values, columns=table_df.columns)
@@ -4272,6 +4297,14 @@ elif page == "Entitlements":
             zoom=5,
             labels={'Total Received': 'Received'}
         )
+        fig.update_coloraxes(
+            colorbar_title_font=dict(
+                size=10  # set your desired font size
+            ),
+            colorbar_tickfont=dict(
+                size=8  # optional: decrease tick font size too
+            )
+        )
         fig.update_layout(
             mapbox={
                 'style': {'version': 8,'sources': {},'layers': []},
@@ -4282,7 +4315,7 @@ elif page == "Entitlements":
             #autosize=True, font=dict(color="black"),
             coloraxis_colorbar=dict(
                 x=0.6,y=0.6,xanchor='left',len=0.5,thickness=6,
-                tickfont=dict(color="black", size=12),   # ⭐ ticks
+                tickfont=dict(color="black", size=9),   # ⭐ ticks
                 title=dict(text="Received", font=dict(color="black")),          # ⭐ title
                 outlinecolor="black", outlinewidth=0.7
             ))
