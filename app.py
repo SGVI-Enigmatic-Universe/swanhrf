@@ -85,6 +85,31 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+st.markdown(
+    """
+    <style>
+    /* Fix sidebar width */
+    [data-testid="stSidebar"] {
+        min-width: 310px !important;
+        max-width: 310px !important;
+    }
+
+    /* Remove resize cursor on sidebar drag handle */
+    [data-testid="stSidebar"] > div:first-child {
+        resize: none !important;
+        overflow: hidden !important;
+    }
+    /* Bring the collapse/expand arrow on top */
+    [data-testid="collapsedControl"] {
+        z-index: 99999999 !important;   /* make it appear above everything */
+        top: 1rem !important;       /* adjust vertical position if needed */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 st.markdown(
     """
     <style>
@@ -309,6 +334,7 @@ header[data-testid="stHeader"]::after {{
     top: 0;
     left: 35%;
     right: 0%;
+    max-width: 360px;
     transform: translateX(-50%);
     height: 70px;
     display: flex;
@@ -880,6 +906,8 @@ if st.session_state.get("role") == "admin":
     icons.append("file-earmark-lock2")  # icon for user activity
     options.append("Add New Users")
     icons.append("person-plus")
+    options.append("Existing Users")
+    icons.append("person-video2")
 # Only HRF Super Admin
 if role == "admin" and UserID == "hrfadmin" :
     options.append("Manage Users")
@@ -4883,4 +4911,54 @@ elif selected == "Manage Users" and st.session_state.get("role") == "admin" and 
         edited_df.to_excel(USER_FILE, index=False)
         st.success("Changes saved successfully!")
 
+elif selected == "Existing Users" and st.session_state.get("role") == "admin":
+    if not st.session_state.get("authenticated", False):
+        login()
+        st.stop()  # stop until user logs in
+    log_user_activity(
+        st.session_state.user,
+        st.session_state.ngo_name,
+        st.session_state.district,
+        "Manage User Page"
+    )
+    st.markdown("<div style='text-align:center; margin-top:-100px; margin-bottom:0px;'><h2 style='font-size:30px; color:#6a0dad'>👥 Existing Users</h2></div>", unsafe_allow_html=True)
+    df = pd.read_excel(USER_FILE)
+    columns_to_show = df.columns[:-2]  # hide last 2 columns
+    df_view = df[columns_to_show]
 
+    column_config = {
+        "#": st.column_config.Column(width=0.5),  # narrow column for serial number
+    }
+    # Set other columns to auto-width
+    for col in df_view.columns:
+        if col != "#":
+            column_config[col] = st.column_config.Column(width="max")
+
+    # Display read-only, auto-width table
+    edited_df = st.data_editor(
+        df_view,
+        disabled=True,
+        hide_index=True,
+        num_rows="dynamic",
+        column_config=column_config,
+        key="read_only_users"
+    )
+    # CSS for transparent table
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stDataEditor"] {
+            background-color: transparent !important;
+        }
+        div[data-testid="stDataEditor"] .row_heading, 
+        div[data-testid="stDataEditor"] .col_heading {
+            background-color: rgba(255,255,255,0.1) !important; /* slightly transparent */
+        }
+        div[data-testid="stDataEditor"] .cell {
+            background-color: rgba(255,255,255,0.05) !important; /* cell transparency */
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    
