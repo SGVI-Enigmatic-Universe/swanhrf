@@ -91,10 +91,27 @@ st.markdown(
     <style>
     /* Fix sidebar width */
     [data-testid="stSidebar"] {
+        width: 310px !important;
         min-width: 310px !important;
         max-width: 310px !important;
     }
-
+    /* Sidebar collapsed width */
+    [data-testid="stSidebar"][aria-expanded="false"] {
+        width: 50px !important;  /* small collapsed sidebar */
+        min-width: 50px !important;
+        max-width: 50px !important;
+    }
+    /* When sidebar is collapsed */
+    [data-testid="stSidebar"][aria-expanded="false"] ~ div .custom-header {
+        left: 310px !important;
+        transform: translateX(0%) !important;
+    }
+    
+    /* Remove margin from main content when sidebar is collapsed */
+    [data-testid="stSidebar"][aria-expanded="false"] ~ div[data-testid="stAppViewContainer"] {
+        margin-left: 50px !important;
+    }
+    
     /* Remove resize cursor on sidebar drag handle */
     [data-testid="stSidebar"] > div:first-child {
         resize: none !important;
@@ -332,8 +349,8 @@ header[data-testid="stHeader"]::after {{
 .custom-header {{
     position: fixed;
     top: 0;
-    left: 35%;
-    right: 0%;
+    left: 36.5%;
+    right: 0;
     max-width: 360px;
     transform: translateX(-50%);
     height: 70px;
@@ -344,6 +361,7 @@ header[data-testid="stHeader"]::after {{
     background: rgba(249, 247, 250, 1);
     z-index: 999999;
 }}
+
 .custom-header button,
 .custom-header a {{
     pointer-events: none;
