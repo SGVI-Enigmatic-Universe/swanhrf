@@ -4803,11 +4803,14 @@ elif selected == "Add New Users" and st.session_state.get("role") == "admin":
     ngo_name_placeholder = st.empty()    
     st.markdown("<div style='text-align:center; margin-top:0px; margin-bottom:0px;'><h2 style='font-size:20px; color:#6a0dad'>🔹Suggestion (Editable)</h2></div>", unsafe_allow_html=True)
     userid = st.text_input("UserID", value=auto_userid)
+    
     if role == "admin":
         ngo_name_value = f"{userid.split('hrf')[0].capitalize()} HRF" if "hrf" in userid.lower() else userid.capitalize()
-        ngo_name_placeholder.text_input("NGO Name", value=ngo_name_value, disabled=True)
+        ngo_name = ngo_name_placeholder.text_input("NGO Name", value=ngo_name_value, disabled=True)
     else:
-        ngo_name_placeholder.text_input("NGO Name")  # editable for users
+        ngo_name = ngo_name_placeholder.text_input("NGO Name")  # editable for users
+    
+    
     def generate_password(userid, role):
         userid = userid.lower()
         if role == "admin" and "hrf" in userid:
