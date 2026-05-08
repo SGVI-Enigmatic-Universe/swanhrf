@@ -1322,7 +1322,7 @@ if page == "Overview":
     st.markdown(html, unsafe_allow_html=True)
     #st.markdown('<p style="color:#6a0dad; font-weight:bold;">Last updated: 09 Feb 2026</p>', unsafe_allow_html=True)
     
-    today_india = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%d %b %Y")
+    today_india = (datetime.now(ZoneInfo("Asia/Kolkata")) - timedelta(days=1)).strftime("%d %b %Y")
 
     st.markdown(
         f"""
